@@ -1,13 +1,15 @@
+name: acopio-api-prod
+
 services:
     app:
         build:
-            context: ../..
+            context: .
             dockerfile: deploy/prod/Dockerfile
         image: acopio-api:prod
         container_name: acopio-api-prod
         restart: unless-stopped
         env_file:
-            - .env
+            - deploy/prod/.env
         extra_hosts:
             - 'host.docker.internal:host-gateway'
         networks:

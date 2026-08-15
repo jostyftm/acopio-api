@@ -1,15 +1,15 @@
+name: acopio-api-dev
+
 services:
     app:
         build:
-            context: ../..
-            dockerfile: deploy/local/Dockerfile
-        image: acopio-api:local
-        container_name: acopio-api-local
+            context: .
+            dockerfile: deploy/dev/Dockerfile
+        image: acopio-api:dev
+        container_name: acopio-api-dev
         restart: unless-stopped
-        ports:
-            - '${APP_PORT:-8080}:80'
         env_file:
-            - .env
+            - deploy/dev/.env
         extra_hosts:
             - 'host.docker.internal:host-gateway'
         networks:

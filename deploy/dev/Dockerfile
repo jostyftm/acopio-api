@@ -29,6 +29,7 @@ RUN composer dump-autoload --no-dev --optimize --classmap-authoritative \
 
 COPY deploy/dev/nginx.conf /etc/nginx/nginx.conf
 COPY deploy/dev/supervisord.conf /etc/supervisord.conf
+COPY deploy/dev/php.ini /usr/local/etc/php/conf.d/zz-uploads.ini
 COPY deploy/dev/entrypoint.sh /entrypoint.sh
 
 RUN chmod +x /entrypoint.sh

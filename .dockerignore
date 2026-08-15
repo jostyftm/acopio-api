@@ -15,6 +15,8 @@ storage/framework/views/*
 storage/pail
 tests
 docker-compose.yml
+docker-compose-dev.yml
+docker-compose.prod.yml
 compose.yaml
 compose.override.yml
 .idea
