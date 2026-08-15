@@ -25,6 +25,7 @@ class RolePermissionSeeder extends Seeder
             'search-reports.manage',
             'stats.view',
             'users.manage',
+            'needs.manage',
         ],
         'operator' => [
             'people.view',

@@ -11,6 +11,8 @@ it('registers a person publicly', function () {
         'phone' => '3001234567',
         'municipality' => 'Buenaventura',
         'neighborhood' => 'La Playita',
+        'sector' => 'urban',
+        'severity' => 'partial',
         'data_consent' => true,
     ]);
 
@@ -40,6 +42,8 @@ it('returns the existing record when the document is already registered', functi
         'last_name' => 'Garcia',
         'phone' => '3001234567',
         'municipality' => 'Buenaventura',
+        'sector' => 'urban',
+        'severity' => 'partial',
         'data_consent' => true,
     ]);
 
@@ -67,6 +71,8 @@ it('rejects invalid phone numbers', function () {
         'last_name' => 'Garcia',
         'phone' => '123456',
         'municipality' => 'Buenaventura',
+        'sector' => 'urban',
+        'severity' => 'partial',
         'data_consent' => true,
     ])->assertUnprocessable()->assertJsonValidationErrors('phone');
 });
@@ -79,6 +85,8 @@ it('accepts phone numbers with the +57 country code', function () {
         'last_name' => 'Garcia',
         'phone' => '+573001234567',
         'municipality' => 'Buenaventura',
+        'sector' => 'urban',
+        'severity' => 'partial',
         'data_consent' => true,
     ])->assertCreated();
 });
@@ -91,6 +99,8 @@ it('rejects spam submissions via the honeypot field', function () {
         'last_name' => 'Garcia',
         'phone' => '3001234567',
         'municipality' => 'Buenaventura',
+        'sector' => 'urban',
+        'severity' => 'partial',
         'data_consent' => true,
         'website' => 'http://spam.example',
     ])->assertUnprocessable()->assertJsonValidationErrors('website');

@@ -2,8 +2,11 @@
 
 namespace App\Http\Requests\Api\V1\Registration;
 
+use App\Enums\AffectationSeverity;
 use App\Enums\DocumentType;
+use App\Enums\Sector;
 use App\Enums\SpecialNeed;
+use App\Rules\EvidenceFile;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -68,11 +71,32 @@ class StoreRegistrationRequest extends FormRequest
             'municipality' => ['required', 'string', 'max:120'],
 
             /**
+             * DIVIPOLA municipality code for unambiguous resolution.
+             *
+             * @example 76109
+             */
+            'municipality_code' => ['nullable', 'string', 'max:5'],
+
+            /**
              * Neighborhood or sector of the location.
              *
              * @example La Playita
              */
             'neighborhood' => ['nullable', 'string', 'max:120'],
+
+            /**
+             * Street address of the person.
+             *
+             * @example Calle 5 # 12-34
+             */
+            'address' => ['nullable', 'string', 'max:255'],
+
+            /**
+             * Area sector where the person is located.
+             *
+             * @example urban
+             */
+            'sector' => ['required', Rule::in(Sector::values())],
 
             /**
              * Latitude of the person location.
@@ -87,6 +111,50 @@ class StoreRegistrationRequest extends FormRequest
              * @example -77.0206341
              */
             'longitude' => ['nullable', 'numeric', 'between:-180,180'],
+
+            /**
+             * Severity of the damage to the affectation.
+             *
+             * @example partial
+             */
+            'severity' => ['required', Rule::in(AffectationSeverity::values())],
+
+            /**
+             * Description of the damage.
+             *
+             * @example Techo parcialmente destruido
+             */
+            'description' => ['nullable', 'string', 'max:1000'],
+
+            /**
+             * Latitude of the incident location (optional, may differ from census).
+             *
+             * @example 3.4215987
+             */
+            'incident_latitude' => ['nullable', 'numeric', 'between:-90,90'],
+
+            /**
+             * Longitude of the incident location (optional, may differ from census).
+             *
+             * @example -76.5232674
+             */
+            'incident_longitude' => ['nullable', 'numeric', 'between:-180,180'],
+
+            /**
+             * Identifiers of the needs related to the affectation.
+             *
+             * @example [1,2,3]
+             */
+            'needs' => ['nullable', 'array', 'max:20'],
+            'needs.*' => ['integer', Rule::exists('needs', 'id')],
+
+            /**
+             * Evidence files of the damage (photos or videos).
+             *
+             * @example
+             */
+            'evidence' => ['nullable', 'array', 'max:5'],
+            'evidence.*' => ['file', 'mimetypes:image/jpeg,image/png,image/webp,image/gif,video/mp4,video/quicktime,video/webm', new EvidenceFile],
 
             /**
              * Special needs of the person.

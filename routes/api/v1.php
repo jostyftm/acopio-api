@@ -1,7 +1,11 @@
 <?php
 
+use App\Http\Controllers\Api\V1\Affectation\AffectationController;
 use App\Http\Controllers\Api\V1\Auth\MeController;
 use App\Http\Controllers\Api\V1\Auth\SocialLoginController;
+use App\Http\Controllers\Api\V1\Department\DepartmentController;
+use App\Http\Controllers\Api\V1\Municipality\MunicipalityController;
+use App\Http\Controllers\Api\V1\Need\NeedController;
 use App\Http\Controllers\Api\V1\Person\PersonController;
 use App\Http\Controllers\Api\V1\Registration\RegistrationController;
 use App\Http\Controllers\Api\V1\SearchReport\SearchReportController;
@@ -16,7 +20,16 @@ Route::name('api.v1.')->group(function (): void {
         ->post('registrations', [RegistrationController::class, 'store'])
         ->name('registrations.store');
 
+    Route::get('registrations/check', [RegistrationController::class, 'check'])
+        ->name('registrations.check');
+
     Route::get('people/search', [PersonController::class, 'search'])->name('people.search');
+
+    Route::get('municipalities', [MunicipalityController::class, 'index'])->name('municipalities.index');
+
+    Route::get('departments', [DepartmentController::class, 'index'])->name('departments.index');
+
+    Route::get('needs', [NeedController::class, 'index'])->name('needs.index');
 
     Route::get('auth/{provider}/redirect', [SocialLoginController::class, 'redirect'])
         ->name('auth.social.redirect');
@@ -36,6 +49,11 @@ Route::name('api.v1.')->group(function (): void {
 
         Route::apiResource('people', PersonController::class)->except(['store']);
         Route::post('people/{person}/verify', [PersonController::class, 'verify'])->name('people.verify');
+
+        Route::post('needs', [NeedController::class, 'store'])->name('needs.store');
+
+        Route::put('affectations/{affectation}', [AffectationController::class, 'update'])
+            ->name('affectations.update');
 
         Route::apiResource('search-reports', SearchReportController::class)->except(['store', 'destroy']);
         Route::apiResource('users', UserController::class);

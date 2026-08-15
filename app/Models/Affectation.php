@@ -1,0 +1,53 @@
+<?php
+
+namespace App\Models;
+
+use App\Enums\AffectationSeverity;
+use Clickbar\Magellan\Data\Geometries\Point;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+
+class Affectation extends Model
+{
+    protected $fillable = [
+        'person_id',
+        'severity',
+        'description',
+        'location',
+    ];
+
+    protected function casts(): array
+    {
+        return [
+            'severity' => AffectationSeverity::class,
+            'location' => Point::class,
+        ];
+    }
+
+    public function person(): BelongsTo
+    {
+        return $this->belongsTo(Person::class);
+    }
+
+    public function evidence(): HasMany
+    {
+        return $this->hasMany(AffectationEvidence::class);
+    }
+
+    public function needs(): BelongsToMany
+    {
+        return $this->belongsToMany(Need::class)->withTimestamps();
+    }
+
+    public function getLatitudeAttribute(): ?float
+    {
+        return $this->location?->getLatitude();
+    }
+
+    public function getLongitudeAttribute(): ?float
+    {
+        return $this->location?->getLongitude();
+    }
+}
