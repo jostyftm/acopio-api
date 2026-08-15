@@ -1,0 +1,17 @@
+<?php
+
+namespace Database\Seeders;
+
+use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Artisan;
+
+class MunicipalitySeeder extends Seeder
+{
+    /**
+     * Run the database seeds.
+     */
+    public function run(): void
+    {
+        Artisan::call('municipalities:import', ['--no-interaction' => true]);
+    }
+}

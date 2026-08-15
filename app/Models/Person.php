@@ -5,12 +5,15 @@ namespace App\Models;
 use App\Enums\DocumentType;
 use App\Enums\PersonStatus;
 use App\Enums\RegistrationSource;
+use App\Enums\Sector;
+use Clickbar\Magellan\Data\Geometries\Point;
 use Database\Factories\PersonFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Str;
 
 class Person extends Model
@@ -24,10 +27,11 @@ class Person extends Model
         'first_name',
         'last_name',
         'phone',
-        'municipality',
         'neighborhood',
-        'latitude',
-        'longitude',
+        'address',
+        'sector',
+        'municipality_id',
+        'location',
         'status',
         'special_needs',
         'source',
@@ -43,10 +47,10 @@ class Person extends Model
             'document_type' => DocumentType::class,
             'status' => PersonStatus::class,
             'source' => RegistrationSource::class,
+            'sector' => Sector::class,
             'special_needs' => 'array',
             'data_consent' => 'boolean',
-            'latitude' => 'float',
-            'longitude' => 'float',
+            'location' => Point::class,
             'verified_at' => 'datetime',
             'located_at' => 'datetime',
         ];
@@ -55,6 +59,16 @@ class Person extends Model
     public function verifiedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'verified_by');
+    }
+
+    public function municipality(): BelongsTo
+    {
+        return $this->belongsTo(Municipality::class);
+    }
+
+    public function affectation(): HasOne
+    {
+        return $this->hasOne(Affectation::class);
     }
 
     public function searchReports(): HasMany
@@ -70,6 +84,25 @@ class Person extends Model
     public function getFullNameAttribute(): string
     {
         return trim($this->first_name.' '.$this->last_name);
+    }
+
+    public function getLatitudeAttribute(): ?float
+    {
+        return $this->location?->getLatitude();
+    }
+
+    public function getLongitudeAttribute(): ?float
+    {
+        return $this->location?->getLongitude();
+    }
+
+    public static function locationFromLatLng(?float $latitude, ?float $longitude): ?Point
+    {
+        if ($latitude === null || $longitude === null) {
+            return null;
+        }
+
+        return Point::makeGeodetic($latitude, $longitude);
     }
 
     public function scopeSearch(Builder $query, string $term): Builder
@@ -99,7 +132,12 @@ class Person extends Model
 
     public function scopeInMunicipality(Builder $query, string $municipality): Builder
     {
-        return $query->where('municipality', $municipality);
+        $normalized = Str::upper(iconv('UTF-8', 'ASCII//TRANSLIT', trim($municipality)));
+
+        return $query->whereHas(
+            'municipality',
+            fn (Builder $q): Builder => $q->where('normalized_name', $normalized),
+        );
     }
 
     public function scopeWithStatus(Builder $query, PersonStatus $status): Builder
@@ -109,6 +147,6 @@ class Person extends Model
 
     public function scopeWithLocation(Builder $query): Builder
     {
-        return $query->whereNotNull('latitude')->whereNotNull('longitude');
+        return $query->whereNotNull('location');
     }
 }

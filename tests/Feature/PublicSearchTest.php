@@ -1,6 +1,14 @@
 <?php
 
+use App\Models\Municipality;
 use App\Models\Person;
+
+beforeEach(function () {
+    $this->artisan('municipalities:import', [
+        '--file' => base_path('tests/Fixtures/geo/municipalities-sample.geojson'),
+        '--no-interaction' => true,
+    ]);
+});
 
 it('returns people with masked document numbers on the public search', function () {
     Person::factory()->create([
@@ -8,7 +16,7 @@ it('returns people with masked document numbers on the public search', function 
         'document_number' => '1234567890',
         'first_name' => 'Maria',
         'last_name' => 'Garcia',
-        'municipality' => 'Cali',
+        'municipality_id' => Municipality::where('code', '76001')->firstOrFail()->id,
     ]);
 
     $this->getJson('/api/v1/people/search?municipality=Cali')
@@ -19,8 +27,12 @@ it('returns people with masked document numbers on the public search', function 
 });
 
 it('filters public search results by status and municipality', function () {
-    Person::factory()->located()->count(2)->create(['municipality' => 'Cali']);
-    Person::factory()->create(['municipality' => 'Cali']);
+    Person::factory()->located()->count(2)->create([
+        'municipality_id' => Municipality::where('code', '76001')->firstOrFail()->id,
+    ]);
+    Person::factory()->create([
+        'municipality_id' => Municipality::where('code', '76001')->firstOrFail()->id,
+    ]);
 
     $this->getJson('/api/v1/people/search?filter[status]=located&filter[municipality]=Cali')
         ->assertOk()

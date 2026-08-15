@@ -6,6 +6,7 @@ use App\Enums\DocumentType;
 use App\Enums\PersonStatus;
 use App\Enums\RegistrationSource;
 use App\Models\Person;
+use Clickbar\Magellan\Data\Geometries\Point;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -21,10 +22,12 @@ class PersonFactory extends Factory
             'first_name' => fake()->firstName(),
             'last_name' => fake()->lastName(),
             'phone' => '57'.fake()->numerify('3#########'),
-            'municipality' => fake()->randomElement(['Buenaventura', 'Cali', 'Tumaco', 'Quibdó']),
             'neighborhood' => fake()->optional()->word(),
-            'latitude' => fake()->optional()->latitude(1.0, 6.0),
-            'longitude' => fake()->optional()->longitude(-78.0, -74.0),
+            'address' => fake()->optional()->streetAddress(),
+            'sector' => fake()->optional(0.8)->randomElement(['urban', 'rural']),
+            'location' => fake()->boolean(70)
+                ? Point::makeGeodetic(fake()->latitude(1.0, 6.0), fake()->longitude(-78.0, -74.0))
+                : null,
             'status' => PersonStatus::Registered,
             'special_needs' => [],
             'source' => RegistrationSource::Web,
@@ -44,6 +47,7 @@ class PersonFactory extends Factory
     {
         return $this->state(fn (array $attributes) => [
             'status' => PersonStatus::Located,
+            'location' => Point::makeGeodetic(fake()->latitude(1.0, 6.0), fake()->longitude(-78.0, -74.0)),
             'verified_at' => now(),
             'located_at' => now(),
         ]);

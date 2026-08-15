@@ -1,0 +1,82 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "DPTO_CCDGO": "05",
+        "DPTO_CNMBR": "ANTIOQUIA",
+        "MPIO_CCDGO": "05001",
+        "MPIO_CNMBR": "MEDELLÍN",
+        "MPIO_CCNCT": "05001"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-75.7, 6.1],
+            [-75.5, 6.1],
+            [-75.5, 6.3],
+            [-75.7, 6.3],
+            [-75.7, 6.1]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "DPTO_CCDGO": "76",
+        "DPTO_CNMBR": "VALLE DEL CAUCA",
+        "MPIO_CCDGO": "76001",
+        "MPIO_CNMBR": "CALI",
+        "MPIO_CCNCT": "76001"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [-76.6, 3.35],
+            [-76.4, 3.35],
+            [-76.4, 3.55],
+            [-76.6, 3.55],
+            [-76.6, 3.35]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "DPTO_CCDGO": "88",
+        "DPTO_CNMBR": "SAN ANDRÉS Y PROVIDENCIA",
+        "MPIO_CCDGO": "88001",
+        "MPIO_CNMBR": "SAN ANDRÉS",
+        "MPIO_CCNCT": "88001"
+      },
+      "geometry": {
+        "type": "MultiPolygon",
+        "coordinates": [
+          [
+            [
+              [-81.8, 12.5],
+              [-81.7, 12.5],
+              [-81.7, 12.6],
+              [-81.8, 12.6],
+              [-81.8, 12.5]
+            ]
+          ],
+          [
+            [
+              [-81.5, 12.5],
+              [-81.4, 12.5],
+              [-81.4, 12.6],
+              [-81.5, 12.6],
+              [-81.5, 12.5]
+            ]
+          ]
+        ]
+      }
+    }
+  ]
+}

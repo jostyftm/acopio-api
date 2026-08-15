@@ -4,6 +4,7 @@ namespace App\Http\Requests\Api\V1\Person;
 
 use App\Enums\DocumentType;
 use App\Enums\PersonStatus;
+use App\Enums\Sector;
 use App\Enums\SpecialNeed;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -74,6 +75,20 @@ class UpdatePersonRequest extends FormRequest
              * @example La Playita
              */
             'neighborhood' => ['nullable', 'string', 'max:120'],
+
+            /**
+             * Street address of the person.
+             *
+             * @example Calle 5 # 12-34
+             */
+            'address' => ['nullable', 'string', 'max:255'],
+
+            /**
+             * Area sector where the person is located.
+             *
+             * @example urban
+             */
+            'sector' => ['sometimes', Rule::in(Sector::values())],
 
             /**
              * Latitude of the person location.

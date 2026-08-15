@@ -74,7 +74,7 @@ class PersonController extends Controller
     {
         $this->authorize('view', $person);
 
-        $person->load(['verifiedBy', 'searchReports']);
+        $person->load(['verifiedBy', 'searchReports', 'municipality', 'affectation.needs', 'affectation.evidence']);
 
         return ApiResponse::success(PersonResource::make($person));
     }
@@ -90,6 +90,7 @@ class PersonController extends Controller
     public function update(UpdatePersonRequest $request, Person $person): JsonResponse
     {
         $person = $this->personService->update($person, $request->validated());
+        $person->load(['municipality', 'affectation.needs', 'affectation.evidence']);
 
         return ApiResponse::success(PersonResource::make($person));
     }
@@ -114,7 +115,7 @@ class PersonController extends Controller
             ]);
         }
 
-        return ApiResponse::success(PersonResource::make($person->load('verifiedBy')));
+        return ApiResponse::success(PersonResource::make($person->load(['verifiedBy', 'municipality', 'affectation.needs', 'affectation.evidence'])));
     }
 
     /**

@@ -5,6 +5,7 @@ namespace App\Http\Resources\Api\V1\Person;
 use App\Enums\PersonStatus;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Str;
 
 class PublicPersonResource extends JsonResource
 {
@@ -31,8 +32,12 @@ class PublicPersonResource extends JsonResource
         $attributes = [
             'full_name' => $this->full_name,
             'masked_document_number' => $this->maskDocumentNumber(),
-            'municipality' => $this->municipality,
+            'municipality' => $this->municipality === null
+                ? null
+                : Str::title(mb_strtolower($this->municipality->name)),
             'neighborhood' => $this->neighborhood,
+            'address' => $this->address,
+            'sector' => $this->sector?->value,
             'status' => $this->status?->value,
             'created_at' => $this->created_at,
         ];
@@ -50,7 +55,16 @@ class PublicPersonResource extends JsonResource
      */
     public function getRelationships(): array
     {
-        return [];
+        return [
+            'affectation' => $this->whenLoaded('affectation', fn (): ?array => $this->affectation === null
+                ? null
+                : [
+                    'severity' => $this->affectation->severity?->value,
+                    'needs' => $this->affectation->needs->map(
+                        fn ($need): array => ['id' => $need->id, 'name' => $need->name],
+                    )->values(),
+                ]),
+        ];
     }
 
     private function maskDocumentNumber(): string
