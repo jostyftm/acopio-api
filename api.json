@@ -1,0 +1,2424 @@
+{
+    "openapi": "3.1.0",
+    "info": {
+        "title": "ACOPIO",
+        "version": "1.0.0",
+        "description": "ACOPIO API - Plataforma de registro \u00fanico de damnificados (RUD) y localizaci\u00f3n de personas tras eventos catastr\u00f3ficos."
+    },
+    "servers": [
+        {
+            "url": "http://localhost:8080/api"
+        }
+    ],
+    "security": [
+        {
+            "http": []
+        }
+    ],
+    "paths": {
+        "/v1/me": {
+            "get": {
+                "operationId": "v1.me",
+                "description": "Retorna los datos del usuario con sesi\u00f3n activa, incluyendo sus roles.",
+                "summary": "Devuelve el usuario autenticado",
+                "tags": [
+                    "Me"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/UserResource"
+                                        },
+                                        "meta": {
+                                            "type": "null"
+                                        }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "data",
+                                        "meta"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/v1/people/search": {
+            "get": {
+                "operationId": "v1.people.search",
+                "description": "Permite buscar damnificados por t\u00e9rmino, municipio, estado o tipo de\ndocumento. El n\u00famero de documento se devuelve enmascarado.",
+                "summary": "Busca personas de forma p\u00fablica",
+                "tags": [
+                    "Person"
+                ],
+                "parameters": [
+                    {
+                        "name": "term",
+                        "in": "query",
+                        "description": "Search term by name, last name, document number or phone.",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "maxLength": 240
+                        },
+                        "example": "Maria Garcia"
+                    },
+                    {
+                        "name": "municipality",
+                        "in": "query",
+                        "description": "Municipality to filter by.",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "maxLength": 120
+                        },
+                        "example": "Buenaventura"
+                    },
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "description": "Registration status of the person.",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "maxLength": 20
+                        },
+                        "example": "located"
+                    },
+                    {
+                        "name": "document_type",
+                        "in": "query",
+                        "description": "Document type of the person.",
+                        "schema": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "enum": [
+                                "CC",
+                                "CE",
+                                "TI",
+                                "PA",
+                                "OTHER",
+                                null
+                            ]
+                        },
+                        "example": "CC"
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer",
+                            "default": 15
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/PublicPersonResource"
+                                            }
+                                        },
+                                        "meta": {
+                                            "type": "null"
+                                        }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "data",
+                                        "meta"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                },
+                "security": []
+            }
+        },
+        "/v1/people": {
+            "get": {
+                "operationId": "v1.people.index",
+                "description": "Devuelve las personas del sistema con su estado, datos de contacto\ny ubicaci\u00f3n. Requiere rol de administrador u operador.",
+                "summary": "Lista las personas registradas de forma paginada",
+                "tags": [
+                    "Person"
+                ],
+                "parameters": [
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer",
+                            "default": 15
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/PersonResource"
+                                            }
+                                        },
+                                        "meta": {
+                                            "type": "null"
+                                        }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "data",
+                                        "meta"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/v1/people/{person}": {
+            "get": {
+                "operationId": "v1.people.show",
+                "description": "Devuelve la informaci\u00f3n completa de la persona junto con su\nverificador y sus reportes de b\u00fasqueda asociados.",
+                "summary": "Muestra el detalle de una persona",
+                "tags": [
+                    "Person"
+                ],
+                "parameters": [
+                    {
+                        "name": "person",
+                        "in": "path",
+                        "required": true,
+                        "description": "La persona a consultar.",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "data": {
+                                            "allOf": [
+                                                {
+                                                    "$ref": "#/components/schemas/PersonResource"
+                                                },
+                                                {
+                                                    "type": "object",
+                                                    "required": [
+                                                        "relationships"
+                                                    ]
+                                                }
+                                            ]
+                                        },
+                                        "meta": {
+                                            "type": "null"
+                                        }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "data",
+                                        "meta"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            },
+            "put": {
+                "operationId": "v1.people.update",
+                "description": "Modifica los datos b\u00e1sicos, de contacto y de ubicaci\u00f3n de la persona.",
+                "summary": "Actualiza los datos de una persona",
+                "tags": [
+                    "Person"
+                ],
+                "parameters": [
+                    {
+                        "name": "person",
+                        "in": "path",
+                        "required": true,
+                        "description": "La persona a actualizar.",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/UpdatePersonRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/PersonResource"
+                                        },
+                                        "meta": {
+                                            "type": "null"
+                                        }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "data",
+                                        "meta"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    }
+                }
+            },
+            "delete": {
+                "operationId": "v1.people.destroy",
+                "description": "Elimina definitivamente el registro de la persona. Requiere permisos.",
+                "summary": "Elimina una persona",
+                "tags": [
+                    "Person"
+                ],
+                "parameters": [
+                    {
+                        "name": "person",
+                        "in": "path",
+                        "required": true,
+                        "description": "La persona a eliminar.",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No content"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/v1/people/{person}/verify": {
+            "post": {
+                "operationId": "v1.people.verify",
+                "description": "Marca a la persona como verificada y, si se env\u00edan coordenadas, la\nregistra como localizada con su ubicaci\u00f3n.",
+                "summary": "Verifica y/o localiza a una persona",
+                "tags": [
+                    "Person"
+                ],
+                "parameters": [
+                    {
+                        "name": "person",
+                        "in": "path",
+                        "required": true,
+                        "description": "La persona a verificar.",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/VerifyPersonRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "data": {
+                                            "allOf": [
+                                                {
+                                                    "$ref": "#/components/schemas/PersonResource"
+                                                },
+                                                {
+                                                    "type": "object",
+                                                    "required": [
+                                                        "relationships"
+                                                    ]
+                                                }
+                                            ]
+                                        },
+                                        "meta": {
+                                            "type": "null"
+                                        }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "data",
+                                        "meta"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    }
+                }
+            }
+        },
+        "/v1/registrations": {
+            "post": {
+                "operationId": "v1.registrations.store",
+                "description": "Crea un registro \u00fanico de damnificado. Si la persona ya existe por\ntipo y n\u00famero de documento, devuelve el registro existente con el\nflag `duplicate` en el `meta`.",
+                "summary": "Registra a una persona damnificada",
+                "tags": [
+                    "Registration"
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/StoreRegistrationRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                },
+                "security": []
+            }
+        },
+        "/v1/search-reports": {
+            "post": {
+                "operationId": "v1.search-reports.store",
+                "description": "Registra la solicitud de localizaci\u00f3n de una persona desaparecida.",
+                "summary": "Crea un reporte de b\u00fasqueda",
+                "tags": [
+                    "SearchReport"
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/StoreSearchReportRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/SearchReportResource"
+                                        },
+                                        "meta": {
+                                            "type": "null"
+                                        }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "data",
+                                        "meta"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    }
+                },
+                "security": []
+            },
+            "get": {
+                "operationId": "v1.search-reports.index",
+                "description": "Devuelve los reportes de personas desaparecidas con sus filtros y\nla relaci\u00f3n a la persona y al funcionario que los atendi\u00f3.",
+                "summary": "Lista los reportes de b\u00fasqueda de forma paginada",
+                "tags": [
+                    "SearchReport"
+                ],
+                "parameters": [
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer",
+                            "default": 15
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/SearchReportResource"
+                                            }
+                                        },
+                                        "meta": {
+                                            "type": "null"
+                                        }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "data",
+                                        "meta"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/v1/search-reports/{searchReport}": {
+            "get": {
+                "operationId": "v1.search-reports.show",
+                "description": "Devuelve la informaci\u00f3n del reporte junto con la persona relacionada\ny el funcionario que lo atendi\u00f3.",
+                "summary": "Muestra el detalle de un reporte de b\u00fasqueda",
+                "tags": [
+                    "SearchReport"
+                ],
+                "parameters": [
+                    {
+                        "name": "searchReport",
+                        "in": "path",
+                        "required": true,
+                        "description": "El reporte a consultar.",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "data": {
+                                            "allOf": [
+                                                {
+                                                    "$ref": "#/components/schemas/SearchReportResource"
+                                                },
+                                                {
+                                                    "type": "object",
+                                                    "required": [
+                                                        "relationships"
+                                                    ]
+                                                }
+                                            ]
+                                        },
+                                        "meta": {
+                                            "type": "null"
+                                        }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "data",
+                                        "meta"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            },
+            "put": {
+                "operationId": "v1.search-reports.update",
+                "description": "Si el estado cambia a `found`, asocia el reporte a la persona\nencontrada y registra la ubicaci\u00f3n; de lo contrario actualiza los\ndatos del reporte.",
+                "summary": "Actualiza o resuelve un reporte de b\u00fasqueda",
+                "tags": [
+                    "SearchReport"
+                ],
+                "parameters": [
+                    {
+                        "name": "searchReport",
+                        "in": "path",
+                        "required": true,
+                        "description": "El reporte a actualizar.",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/UpdateSearchReportRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "data": {
+                                            "allOf": [
+                                                {
+                                                    "$ref": "#/components/schemas/SearchReportResource"
+                                                },
+                                                {
+                                                    "type": "object",
+                                                    "required": [
+                                                        "relationships"
+                                                    ]
+                                                }
+                                            ]
+                                        },
+                                        "meta": {
+                                            "type": "null"
+                                        }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "data",
+                                        "meta"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    }
+                }
+            }
+        },
+        "/v1/sms/webhook": {
+            "post": {
+                "operationId": "v1.sms.webhook",
+                "description": "Recibe el webhook de la pasarela SMS y procesa la b\u00fasqueda o el\nregistro indicado en el cuerpo del mensaje.",
+                "summary": "Procesa un mensaje SMS entrante",
+                "tags": [
+                    "SmsWebhook"
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/HandleSmsWebhookRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "id": {
+                                                    "type": "integer"
+                                                },
+                                                "status": {
+                                                    "type": "string"
+                                                }
+                                            },
+                                            "required": [
+                                                "id",
+                                                "status"
+                                            ]
+                                        },
+                                        "meta": {
+                                            "type": "null"
+                                        }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "data",
+                                        "meta"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    }
+                },
+                "security": []
+            }
+        },
+        "/v1/auth/{provider}/redirect": {
+            "get": {
+                "operationId": "v1.auth.social.redirect",
+                "description": "Genera la URL de autorizaci\u00f3n de Google o Microsoft para el flujo SSO\ndel SPA. El navegador debe redirigirse a la URL devuelta; el callback\ndel proveedor redirige al frontend con el token de acceso en el\nfragmento de la URL (`#access_token=...`).",
+                "summary": "Devuelve la URL de inicio de sesi\u00f3n con un proveedor social",
+                "tags": [
+                    "SocialLogin"
+                ],
+                "parameters": [
+                    {
+                        "name": "provider",
+                        "in": "path",
+                        "required": true,
+                        "description": "Proveedor social: `google` o `microsoft`.",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "url": {
+                                                    "type": "string"
+                                                }
+                                            },
+                                            "required": [
+                                                "url"
+                                            ]
+                                        },
+                                        "meta": {
+                                            "type": "null"
+                                        }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "data",
+                                        "meta"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    }
+                },
+                "security": []
+            }
+        },
+        "/v1/stats": {
+            "get": {
+                "operationId": "v1.stats.show",
+                "description": "Resumen general: total de personas, distribuci\u00f3n por estado y\nmunicipio, personas con ubicaci\u00f3n y reportes de b\u00fasqueda pendientes.",
+                "summary": "Devuelve las estad\u00edsticas del registro",
+                "tags": [
+                    "Stats"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "total_people": {
+                                                    "type": "integer"
+                                                },
+                                                "by_status": {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "registered": {
+                                                            "type": "integer"
+                                                        },
+                                                        "verified": {
+                                                            "type": "integer"
+                                                        },
+                                                        "located": {
+                                                            "type": "integer"
+                                                        }
+                                                    },
+                                                    "required": [
+                                                        "registered",
+                                                        "verified",
+                                                        "located"
+                                                    ]
+                                                },
+                                                "by_municipality": {
+                                                    "type": "array",
+                                                    "items": {}
+                                                },
+                                                "people_with_location": {
+                                                    "type": "integer"
+                                                },
+                                                "pending_search_reports": {
+                                                    "type": "integer"
+                                                },
+                                                "total_search_reports": {
+                                                    "type": "integer"
+                                                }
+                                            },
+                                            "required": [
+                                                "total_people",
+                                                "by_status",
+                                                "by_municipality",
+                                                "people_with_location",
+                                                "pending_search_reports",
+                                                "total_search_reports"
+                                            ]
+                                        },
+                                        "meta": {
+                                            "type": "null"
+                                        }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "data",
+                                        "meta"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        },
+        "/v1/users": {
+            "get": {
+                "operationId": "v1.users.index",
+                "description": "Devuelve los usuarios registrados con sus roles. Permite filtrar por\nemail y ordenar por fecha de creaci\u00f3n.",
+                "summary": "Lista los usuarios del sistema de forma paginada",
+                "tags": [
+                    "User"
+                ],
+                "parameters": [
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "schema": {
+                            "type": "integer",
+                            "default": 15
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/UserResource"
+                                            }
+                                        },
+                                        "meta": {
+                                            "type": "null"
+                                        }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "data",
+                                        "meta"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            },
+            "post": {
+                "operationId": "v1.users.store",
+                "description": "Registra un usuario en el sistema con sus datos de acceso.",
+                "summary": "Crea un nuevo usuario",
+                "tags": [
+                    "User"
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/StoreUserRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/UserResource"
+                                        },
+                                        "meta": {
+                                            "type": "null"
+                                        }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "data",
+                                        "meta"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    }
+                }
+            }
+        },
+        "/v1/users/{user}": {
+            "get": {
+                "operationId": "v1.users.show",
+                "description": "Devuelve la informaci\u00f3n de un usuario espec\u00edfico con sus roles.",
+                "summary": "Muestra el detalle de un usuario",
+                "tags": [
+                    "User"
+                ],
+                "parameters": [
+                    {
+                        "name": "user",
+                        "in": "path",
+                        "required": true,
+                        "description": "El usuario a consultar.",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/UserResource"
+                                        },
+                                        "meta": {
+                                            "type": "null"
+                                        }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "data",
+                                        "meta"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            },
+            "put": {
+                "operationId": "v1.users.update",
+                "description": "Modifica los datos de acceso e informaci\u00f3n del usuario.",
+                "summary": "Actualiza un usuario",
+                "tags": [
+                    "User"
+                ],
+                "parameters": [
+                    {
+                        "name": "user",
+                        "in": "path",
+                        "required": true,
+                        "description": "El usuario a actualizar.",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/UpdateUserRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/UserResource"
+                                        },
+                                        "meta": {
+                                            "type": "null"
+                                        }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "data",
+                                        "meta"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationException"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    }
+                }
+            },
+            "delete": {
+                "operationId": "v1.users.destroy",
+                "description": "Elimina definitivamente el usuario del sistema.",
+                "summary": "Elimina un usuario",
+                "tags": [
+                    "User"
+                ],
+                "parameters": [
+                    {
+                        "name": "user",
+                        "in": "path",
+                        "required": true,
+                        "description": "El usuario a eliminar.",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No content"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/AuthorizationException"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/ModelNotFoundException"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/AuthenticationException"
+                    }
+                }
+            }
+        }
+    },
+    "components": {
+        "securitySchemes": {
+            "http": {
+                "type": "http",
+                "scheme": "bearer"
+            }
+        },
+        "schemas": {
+            "HandleSmsWebhookRequest": {
+                "type": "object",
+                "properties": {
+                    "phone": {
+                        "type": "string",
+                        "description": "Phone number that sent the SMS.",
+                        "examples": [
+                            "573001234567"
+                        ],
+                        "maxLength": 24
+                    },
+                    "body": {
+                        "type": "string",
+                        "description": "Raw body of the incoming SMS.",
+                        "examples": [
+                            "REG, Maria Garcia, CC, 123456789, Buenaventura"
+                        ],
+                        "maxLength": 1600
+                    }
+                },
+                "required": [
+                    "phone",
+                    "body"
+                ],
+                "title": "HandleSmsWebhookRequest"
+            },
+            "PersonResource": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "type": {
+                        "type": "string",
+                        "const": "person"
+                    },
+                    "attributes": {
+                        "type": "object",
+                        "properties": {
+                            "document_type": {
+                                "type": "string"
+                            },
+                            "document_number": {
+                                "type": "string"
+                            },
+                            "first_name": {
+                                "type": "string"
+                            },
+                            "last_name": {
+                                "type": "string"
+                            },
+                            "full_name": {
+                                "type": "string"
+                            },
+                            "phone": {
+                                "type": "string"
+                            },
+                            "municipality": {
+                                "type": "string"
+                            },
+                            "neighborhood": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "latitude": {
+                                "type": [
+                                    "number",
+                                    "null"
+                                ]
+                            },
+                            "longitude": {
+                                "type": [
+                                    "number",
+                                    "null"
+                                ]
+                            },
+                            "status": {
+                                "type": "string"
+                            },
+                            "special_needs": {
+                                "type": "array",
+                                "items": {}
+                            },
+                            "source": {
+                                "type": "string"
+                            },
+                            "data_consent": {
+                                "type": "boolean"
+                            },
+                            "verified_at": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ],
+                                "format": "date-time"
+                            },
+                            "located_at": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ],
+                                "format": "date-time"
+                            },
+                            "created_at": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ],
+                                "format": "date-time"
+                            },
+                            "updated_at": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ],
+                                "format": "date-time"
+                            }
+                        },
+                        "required": [
+                            "document_type",
+                            "document_number",
+                            "first_name",
+                            "last_name",
+                            "full_name",
+                            "phone",
+                            "municipality",
+                            "neighborhood",
+                            "latitude",
+                            "longitude",
+                            "status",
+                            "special_needs",
+                            "source",
+                            "data_consent",
+                            "verified_at",
+                            "located_at",
+                            "created_at",
+                            "updated_at"
+                        ]
+                    },
+                    "relationships": {
+                        "type": "object",
+                        "properties": {
+                            "verified_by": {
+                                "type": [
+                                    "object",
+                                    "null"
+                                ],
+                                "properties": {
+                                    "id": {
+                                        "type": "integer"
+                                    },
+                                    "name": {
+                                        "type": "string"
+                                    }
+                                },
+                                "required": [
+                                    "id",
+                                    "name"
+                                ]
+                            },
+                            "search_reports": {
+                                "type": "array",
+                                "items": {
+                                    "$ref": "#/components/schemas/SearchReportResource"
+                                }
+                            }
+                        }
+                    }
+                },
+                "required": [
+                    "id",
+                    "type",
+                    "attributes",
+                    "relationships"
+                ],
+                "title": "PersonResource"
+            },
+            "PersonStatus": {
+                "type": "string",
+                "enum": [
+                    "registered",
+                    "verified",
+                    "located"
+                ],
+                "title": "PersonStatus"
+            },
+            "PublicPersonResource": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "type": {
+                        "type": "string",
+                        "const": "person"
+                    },
+                    "attributes": {
+                        "type": "object",
+                        "properties": {
+                            "full_name": {
+                                "type": "string"
+                            },
+                            "masked_document_number": {
+                                "type": "string"
+                            },
+                            "municipality": {
+                                "type": "string"
+                            },
+                            "neighborhood": {
+                                "type": "string"
+                            },
+                            "status": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "created_at": {
+                                "type": "string"
+                            },
+                            "latitude": {
+                                "type": "string"
+                            },
+                            "longitude": {
+                                "type": "string"
+                            }
+                        },
+                        "required": [
+                            "full_name",
+                            "masked_document_number",
+                            "municipality",
+                            "neighborhood",
+                            "status",
+                            "created_at",
+                            "latitude",
+                            "longitude"
+                        ]
+                    },
+                    "relationships": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "minItems": 0,
+                        "maxItems": 0,
+                        "additionalItems": false
+                    }
+                },
+                "required": [
+                    "id",
+                    "type",
+                    "attributes",
+                    "relationships"
+                ],
+                "title": "PublicPersonResource"
+            },
+            "ReportStatus": {
+                "type": "string",
+                "enum": [
+                    "pending",
+                    "found",
+                    "closed"
+                ],
+                "title": "ReportStatus"
+            },
+            "SearchReportResource": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "type": {
+                        "type": "string",
+                        "const": "search_report"
+                    },
+                    "attributes": {
+                        "type": "object",
+                        "properties": {
+                            "searched_name": {
+                                "type": "string"
+                            },
+                            "document_type": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "document_number": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "municipality": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "reporter_name": {
+                                "type": "string"
+                            },
+                            "reporter_phone": {
+                                "type": "string"
+                            },
+                            "relationship": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "status": {
+                                "type": "string"
+                            },
+                            "notes": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "located_at": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ],
+                                "format": "date-time"
+                            },
+                            "created_at": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ],
+                                "format": "date-time"
+                            },
+                            "updated_at": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ],
+                                "format": "date-time"
+                            }
+                        },
+                        "required": [
+                            "searched_name",
+                            "document_type",
+                            "document_number",
+                            "municipality",
+                            "reporter_name",
+                            "reporter_phone",
+                            "relationship",
+                            "status",
+                            "notes",
+                            "located_at",
+                            "created_at",
+                            "updated_at"
+                        ]
+                    },
+                    "relationships": {
+                        "type": "object",
+                        "properties": {
+                            "person": {
+                                "type": [
+                                    "object",
+                                    "null"
+                                ],
+                                "properties": {
+                                    "id": {
+                                        "type": "integer"
+                                    },
+                                    "first_name": {
+                                        "type": "string"
+                                    },
+                                    "last_name": {
+                                        "type": "string"
+                                    },
+                                    "full_name": {
+                                        "type": "string"
+                                    }
+                                },
+                                "required": [
+                                    "id",
+                                    "first_name",
+                                    "last_name",
+                                    "full_name"
+                                ]
+                            },
+                            "handled_by": {
+                                "type": [
+                                    "object",
+                                    "null"
+                                ],
+                                "properties": {
+                                    "id": {
+                                        "type": "integer"
+                                    },
+                                    "name": {
+                                        "type": "string"
+                                    }
+                                },
+                                "required": [
+                                    "id",
+                                    "name"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "required": [
+                    "id",
+                    "type",
+                    "attributes",
+                    "relationships"
+                ],
+                "title": "SearchReportResource"
+            },
+            "StoreRegistrationRequest": {
+                "type": "object",
+                "properties": {
+                    "document_type": {
+                        "type": "string",
+                        "description": "Document type of the person.",
+                        "enum": [
+                            "CC",
+                            "CE",
+                            "TI",
+                            "PA",
+                            "OTHER"
+                        ],
+                        "examples": [
+                            "CC"
+                        ]
+                    },
+                    "document_number": {
+                        "type": "string",
+                        "description": "Document number of the person.",
+                        "examples": [
+                            "123456789"
+                        ],
+                        "maxLength": 32
+                    },
+                    "first_name": {
+                        "type": "string",
+                        "description": "First name of the affected person.",
+                        "examples": [
+                            "Maria Fernanda"
+                        ],
+                        "maxLength": 120
+                    },
+                    "last_name": {
+                        "type": "string",
+                        "description": "Last name of the affected person.",
+                        "examples": [
+                            "Garcia Lopez"
+                        ],
+                        "maxLength": 120
+                    },
+                    "phone": {
+                        "type": "string",
+                        "description": "Contact phone number (optional country code +57).",
+                        "pattern": "^(\\+?57)?3[0-9]{9}$",
+                        "examples": [
+                            "573001234567"
+                        ],
+                        "maxLength": 24
+                    },
+                    "municipality": {
+                        "type": "string",
+                        "description": "Municipality where the person was located.",
+                        "examples": [
+                            "Buenaventura"
+                        ],
+                        "maxLength": 120
+                    },
+                    "neighborhood": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "description": "Neighborhood or sector of the location.",
+                        "examples": [
+                            "La Playita"
+                        ],
+                        "maxLength": 120
+                    },
+                    "latitude": {
+                        "type": [
+                            "number",
+                            "null"
+                        ],
+                        "description": "Latitude of the person location.",
+                        "examples": [
+                            3.8775248
+                        ],
+                        "minimum": -90,
+                        "maximum": 90
+                    },
+                    "longitude": {
+                        "type": [
+                            "number",
+                            "null"
+                        ],
+                        "description": "Longitude of the person location.",
+                        "examples": [
+                            -77.0206341
+                        ],
+                        "minimum": -180,
+                        "maximum": 180
+                    },
+                    "special_needs": {
+                        "type": [
+                            "array",
+                            "null"
+                        ],
+                        "description": "Special needs of the person.",
+                        "examples": [
+                            [
+                                "children",
+                                "disability"
+                            ]
+                        ],
+                        "items": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "enum": [
+                                "children",
+                                "senior",
+                                "disability",
+                                "pregnant",
+                                "chronic_illness",
+                                null
+                            ]
+                        }
+                    },
+                    "data_consent": {
+                        "description": "Consent for personal data processing (Colombian habeas data law).",
+                        "enum": [
+                            "yes",
+                            "on",
+                            "1",
+                            1,
+                            "true",
+                            true
+                        ],
+                        "examples": [
+                            true
+                        ]
+                    },
+                    "website": {
+                        "type": "string",
+                        "description": "Anti-spam honeypot field; must remain empty.",
+                        "examples": [
+                            ""
+                        ],
+                        "maxLength": 0
+                    }
+                },
+                "required": [
+                    "document_type",
+                    "document_number",
+                    "first_name",
+                    "last_name",
+                    "phone",
+                    "municipality",
+                    "data_consent"
+                ],
+                "title": "StoreRegistrationRequest"
+            },
+            "StoreSearchReportRequest": {
+                "type": "object",
+                "properties": {
+                    "person_id": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ],
+                        "description": "Person id when the report is linked to an existing record.",
+                        "examples": [
+                            42
+                        ]
+                    },
+                    "searched_name": {
+                        "type": "string",
+                        "description": "Name of the missing person being searched for.",
+                        "examples": [
+                            "Juan Perez"
+                        ],
+                        "maxLength": 240
+                    },
+                    "document_type": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "description": "Document type of the missing person.",
+                        "enum": [
+                            "CC",
+                            "CE",
+                            "TI",
+                            "PA",
+                            "OTHER",
+                            null
+                        ],
+                        "examples": [
+                            "CC"
+                        ]
+                    },
+                    "document_number": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "description": "Document number of the missing person.",
+                        "examples": [
+                            "987654321"
+                        ],
+                        "maxLength": 32
+                    },
+                    "municipality": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "description": "Municipality where the person went missing.",
+                        "examples": [
+                            "Buenaventura"
+                        ],
+                        "maxLength": 120
+                    },
+                    "reporter_name": {
+                        "type": "string",
+                        "description": "Full name of the person filing the report.",
+                        "examples": [
+                            "Luisa Martinez"
+                        ],
+                        "maxLength": 240
+                    },
+                    "reporter_phone": {
+                        "type": "string",
+                        "description": "Contact phone of the reporter (optional country code +57).",
+                        "pattern": "^(\\+?57)?3[0-9]{9}$",
+                        "examples": [
+                            "573001234567"
+                        ],
+                        "maxLength": 24
+                    },
+                    "relationship": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "description": "Relationship between the reporter and the missing person.",
+                        "examples": [
+                            "Mother"
+                        ],
+                        "maxLength": 120
+                    },
+                    "notes": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "description": "Additional notes about the report.",
+                        "examples": [
+                            "Last seen near the port"
+                        ],
+                        "maxLength": 2000
+                    }
+                },
+                "required": [
+                    "searched_name",
+                    "reporter_name",
+                    "reporter_phone"
+                ],
+                "title": "StoreSearchReportRequest"
+            },
+            "StoreUserRequest": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "description": "Full name of the user.",
+                        "examples": [
+                            "Ana Torres"
+                        ],
+                        "maxLength": 240
+                    },
+                    "email": {
+                        "type": "string",
+                        "format": "email",
+                        "description": "Work email of the user.",
+                        "examples": [
+                            "ana.torres@example.com"
+                        ],
+                        "maxLength": 240
+                    },
+                    "password": {
+                        "type": "string",
+                        "description": "Temporary password for the user.",
+                        "examples": [
+                            "secret123"
+                        ],
+                        "minLength": 8
+                    },
+                    "role": {
+                        "type": "string",
+                        "description": "Role assigned to the user.",
+                        "enum": [
+                            "admin",
+                            "operator",
+                            "viewer"
+                        ],
+                        "examples": [
+                            "operator"
+                        ]
+                    },
+                    "password_confirmation": {
+                        "type": "string",
+                        "minLength": 8
+                    }
+                },
+                "required": [
+                    "name",
+                    "email",
+                    "password",
+                    "role",
+                    "password_confirmation"
+                ],
+                "title": "StoreUserRequest"
+            },
+            "UpdatePersonRequest": {
+                "type": "object",
+                "properties": {
+                    "document_type": {
+                        "type": "string",
+                        "description": "Document type of the person.",
+                        "enum": [
+                            "CC",
+                            "CE",
+                            "TI",
+                            "PA",
+                            "OTHER"
+                        ],
+                        "examples": [
+                            "CC"
+                        ]
+                    },
+                    "document_number": {
+                        "type": "string",
+                        "description": "Document number of the person.",
+                        "examples": [
+                            "123456789"
+                        ],
+                        "maxLength": 32
+                    },
+                    "first_name": {
+                        "type": "string",
+                        "description": "First name of the affected person.",
+                        "examples": [
+                            "Maria Fernanda"
+                        ],
+                        "maxLength": 120
+                    },
+                    "last_name": {
+                        "type": "string",
+                        "description": "Last name of the affected person.",
+                        "examples": [
+                            "Garcia Lopez"
+                        ],
+                        "maxLength": 120
+                    },
+                    "phone": {
+                        "type": "string",
+                        "description": "Contact phone number (optional country code +57).",
+                        "pattern": "^(\\+?57)?3[0-9]{9}$",
+                        "examples": [
+                            "573001234567"
+                        ],
+                        "maxLength": 24
+                    },
+                    "municipality": {
+                        "type": "string",
+                        "description": "Municipality where the person was located.",
+                        "examples": [
+                            "Buenaventura"
+                        ],
+                        "maxLength": 120
+                    },
+                    "neighborhood": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "description": "Neighborhood or sector of the location.",
+                        "examples": [
+                            "La Playita"
+                        ],
+                        "maxLength": 120
+                    },
+                    "latitude": {
+                        "type": [
+                            "number",
+                            "null"
+                        ],
+                        "description": "Latitude of the person location.",
+                        "examples": [
+                            3.8775248
+                        ],
+                        "minimum": -90,
+                        "maximum": 90
+                    },
+                    "longitude": {
+                        "type": [
+                            "number",
+                            "null"
+                        ],
+                        "description": "Longitude of the person location.",
+                        "examples": [
+                            -77.0206341
+                        ],
+                        "minimum": -180,
+                        "maximum": 180
+                    },
+                    "special_needs": {
+                        "type": [
+                            "array",
+                            "null"
+                        ],
+                        "description": "Special needs of the person.",
+                        "examples": [
+                            [
+                                "children",
+                                "disability"
+                            ]
+                        ],
+                        "items": {
+                            "type": [
+                                "string",
+                                "null"
+                            ],
+                            "enum": [
+                                "children",
+                                "senior",
+                                "disability",
+                                "pregnant",
+                                "chronic_illness",
+                                null
+                            ]
+                        }
+                    },
+                    "status": {
+                        "description": "Registration status of the person.",
+                        "examples": [
+                            "verified"
+                        ],
+                        "$ref": "#/components/schemas/PersonStatus"
+                    }
+                },
+                "title": "UpdatePersonRequest"
+            },
+            "UpdateSearchReportRequest": {
+                "type": "object",
+                "properties": {
+                    "person_id": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ],
+                        "description": "Person id linked to the found record.",
+                        "examples": [
+                            42
+                        ]
+                    },
+                    "status": {
+                        "description": "New status of the report.",
+                        "examples": [
+                            "found"
+                        ],
+                        "$ref": "#/components/schemas/ReportStatus"
+                    },
+                    "notes": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "description": "Administrative notes about the report.",
+                        "examples": [
+                            "Person was located by a rescue team"
+                        ],
+                        "maxLength": 2000
+                    }
+                },
+                "title": "UpdateSearchReportRequest"
+            },
+            "UpdateUserRequest": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "description": "Full name of the user.",
+                        "examples": [
+                            "Ana Torres"
+                        ],
+                        "maxLength": 240
+                    },
+                    "email": {
+                        "type": "string",
+                        "format": "email",
+                        "description": "Work email of the user.",
+                        "examples": [
+                            "ana.torres@example.com"
+                        ],
+                        "maxLength": 240
+                    },
+                    "password": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "description": "New password for the user.",
+                        "examples": [
+                            "secret123"
+                        ],
+                        "minLength": 8
+                    },
+                    "role": {
+                        "type": "string",
+                        "description": "Role assigned to the user.",
+                        "enum": [
+                            "admin",
+                            "operator",
+                            "viewer"
+                        ],
+                        "examples": [
+                            "operator"
+                        ]
+                    },
+                    "password_confirmation": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "minLength": 8
+                    }
+                },
+                "title": "UpdateUserRequest"
+            },
+            "UserResource": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "type": {
+                        "type": "string",
+                        "const": "user"
+                    },
+                    "attributes": {
+                        "type": "object",
+                        "properties": {
+                            "name": {
+                                "type": "string"
+                            },
+                            "email": {
+                                "type": "string"
+                            },
+                            "provider": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "roles": {
+                                "type": "array",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "relations": {
+                                            "type": "array",
+                                            "prefixItems": [
+                                                {
+                                                    "type": "string",
+                                                    "const": "roles"
+                                                }
+                                            ],
+                                            "minItems": 1,
+                                            "maxItems": 1,
+                                            "additionalItems": false
+                                        }
+                                    },
+                                    "required": [
+                                        "relations"
+                                    ]
+                                }
+                            },
+                            "created_at": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ],
+                                "format": "date-time"
+                            },
+                            "updated_at": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ],
+                                "format": "date-time"
+                            }
+                        },
+                        "required": [
+                            "name",
+                            "email",
+                            "provider",
+                            "roles",
+                            "created_at",
+                            "updated_at"
+                        ]
+                    },
+                    "relationships": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "minItems": 0,
+                        "maxItems": 0,
+                        "additionalItems": false
+                    }
+                },
+                "required": [
+                    "id",
+                    "type",
+                    "attributes",
+                    "relationships"
+                ],
+                "title": "UserResource"
+            },
+            "VerifyPersonRequest": {
+                "type": "object",
+                "properties": {
+                    "latitude": {
+                        "type": [
+                            "number",
+                            "null"
+                        ],
+                        "description": "Latitude of the person location.",
+                        "examples": [
+                            3.8775248
+                        ],
+                        "minimum": -90,
+                        "maximum": 90
+                    },
+                    "longitude": {
+                        "type": [
+                            "number",
+                            "null"
+                        ],
+                        "description": "Longitude of the person location.",
+                        "examples": [
+                            -77.0206341
+                        ],
+                        "minimum": -180,
+                        "maximum": 180
+                    }
+                },
+                "title": "VerifyPersonRequest"
+            }
+        },
+        "responses": {
+            "ValidationException": {
+                "description": "Validation error",
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "message": {
+                                    "type": "string",
+                                    "description": "Errors overview."
+                                },
+                                "errors": {
+                                    "type": "object",
+                                    "description": "A detailed description of each field that failed validation.",
+                                    "additionalProperties": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            },
+                            "required": [
+                                "message",
+                                "errors"
+                            ]
+                        }
+                    }
+                }
+            },
+            "ModelNotFoundException": {
+                "description": "Not found",
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "message": {
+                                    "type": "string",
+                                    "description": "Error overview."
+                                }
+                            },
+                            "required": [
+                                "message"
+                            ]
+                        }
+                    }
+                }
+            },
+            "AuthorizationException": {
+                "description": "Authorization error",
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "message": {
+                                    "type": "string",
+                                    "description": "Error overview."
+                                }
+                            },
+                            "required": [
+                                "message"
+                            ]
+                        }
+                    }
+                }
+            },
+            "AuthenticationException": {
+                "description": "Unauthenticated",
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "message": {
+                                    "type": "string",
+                                    "description": "Error overview."
+                                }
+                            },
+                            "required": [
+                                "message"
+                            ]
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

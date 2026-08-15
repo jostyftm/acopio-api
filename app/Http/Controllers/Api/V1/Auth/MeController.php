@@ -10,6 +10,13 @@ use Illuminate\Http\Request;
 
 class MeController extends Controller
 {
+    /**
+     * Devuelve el usuario autenticado.
+     *
+     * Retorna los datos del usuario con sesión activa, incluyendo sus roles.
+     *
+     * @param  Request  $request  La petición autenticada actual.
+     */
     public function __invoke(Request $request): JsonResponse
     {
         $user = $request->user();

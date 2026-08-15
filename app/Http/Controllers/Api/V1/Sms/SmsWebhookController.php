@@ -14,6 +14,14 @@ class SmsWebhookController extends Controller
         private readonly SmsService $smsService,
     ) {}
 
+    /**
+     * Procesa un mensaje SMS entrante.
+     *
+     * Recibe el webhook de la pasarela SMS y procesa la búsqueda o el
+     * registro indicado en el cuerpo del mensaje.
+     *
+     * @param  HandleSmsWebhookRequest  $request  Datos del webhook: `phone` y `body`.
+     */
     public function store(HandleSmsWebhookRequest $request): JsonResponse
     {
         $record = $this->smsService->processIncoming($request->input('phone'), $request->input('body'));

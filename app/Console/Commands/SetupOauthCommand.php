@@ -6,12 +6,13 @@ use Illuminate\Console\Command;
 use Laravel\Passport\Client;
 use Laravel\Passport\ClientRepository;
 use Laravel\Passport\Passport;
+use RuntimeException;
 
 class SetupOauthCommand extends Command
 {
     protected $signature = 'acopio:setup-oauth';
 
-    protected $description = 'Generate Passport keys and create the default OAuth clients (SPA public + internal confidential).';
+    protected $description = 'Generate Passport keys and create the default OAuth clients (SPA public, internal confidential and personal access).';
 
     public function handle(ClientRepository $clients): int
     {
@@ -23,6 +24,7 @@ class SetupOauthCommand extends Command
 
         $this->ensureSpaClient($clients);
         $this->ensureInternalClient($clients);
+        $this->ensurePersonalAccessClient($clients);
 
         return self::SUCCESS;
     }
@@ -127,5 +129,18 @@ class SetupOauthCommand extends Command
     private function frontendRedirectUri(): string
     {
         return (string) config('app.frontend_url', 'http://localhost:3000').'/auth/callback';
+    }
+
+    private function ensurePersonalAccessClient(ClientRepository $clients): void
+    {
+        $name = 'ACOPIO API Tokens';
+
+        try {
+            $clients->personalAccessClient('users');
+            $this->components->info("Personal access client [{$name}] already exists.");
+        } catch (RuntimeException) {
+            $clients->createPersonalAccessGrantClient($name, 'users');
+            $this->components->info("Personal access client [{$name}] created.");
+        }
     }
 }

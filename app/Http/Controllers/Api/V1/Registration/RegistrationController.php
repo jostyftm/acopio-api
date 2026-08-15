@@ -15,6 +15,15 @@ class RegistrationController extends Controller
         private readonly RegistrationService $registrationService,
     ) {}
 
+    /**
+     * Registra a una persona damnificada.
+     *
+     * Crea un registro único de damnificado. Si la persona ya existe por
+     * tipo y número de documento, devuelve el registro existente con el
+     * flag `duplicate` en el `meta`.
+     *
+     * @param  StoreRegistrationRequest  $request  Datos del damnificado.
+     */
     public function store(StoreRegistrationRequest $request): JsonResponse
     {
         $person = $this->registrationService->register($request->validated());

@@ -22,8 +22,6 @@ class AuthServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Passport::useClientModel(PassportClient::class);
-        Passport::enablePasswordGrant();
-        Passport::authorizationView('oauth.authorize');
         Passport::tokensExpireIn(now()->addHours(12));
         Passport::refreshTokensExpireIn(now()->addDays(30));
         Passport::personalAccessTokensExpireIn(now()->addMonths(6));

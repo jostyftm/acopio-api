@@ -13,6 +13,12 @@ class StatsController extends Controller
         private readonly StatsService $statsService,
     ) {}
 
+    /**
+     * Devuelve las estadísticas del registro.
+     *
+     * Resumen general: total de personas, distribución por estado y
+     * municipio, personas con ubicación y reportes de búsqueda pendientes.
+     */
     public function show(): JsonResponse
     {
         return ApiResponse::success($this->statsService->summary());

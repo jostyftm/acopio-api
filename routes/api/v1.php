@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\V1\Auth\MeController;
+use App\Http\Controllers\Api\V1\Auth\SocialLoginController;
 use App\Http\Controllers\Api\V1\Person\PersonController;
 use App\Http\Controllers\Api\V1\Registration\RegistrationController;
 use App\Http\Controllers\Api\V1\SearchReport\SearchReportController;
@@ -16,6 +17,9 @@ Route::name('api.v1.')->group(function (): void {
         ->name('registrations.store');
 
     Route::get('people/search', [PersonController::class, 'search'])->name('people.search');
+
+    Route::get('auth/{provider}/redirect', [SocialLoginController::class, 'redirect'])
+        ->name('auth.social.redirect');
 
     Route::post('search-reports', [SearchReportController::class, 'store'])
         ->name('search-reports.store');

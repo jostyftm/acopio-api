@@ -49,7 +49,7 @@ it('realigns an existing SPA client to the configured id', function (): void {
     $spa = Client::where('name', 'ACOPIO SPA')->first();
 
     expect($spa->id)->toBe(testSpaClientId())
-        ->and(Client::count())->toBe(2);
+        ->and(Client::count())->toBe(3);
 });
 
 it('is idempotent when run twice with a configured id', function (): void {
@@ -59,5 +59,16 @@ it('is idempotent when run twice with a configured id', function (): void {
     $this->artisan('acopio:setup-oauth')->assertSuccessful();
 
     expect(Client::where('name', 'ACOPIO SPA')->count())->toBe(1)
-        ->and(Client::where('name', 'ACOPIO Internal Tests')->count())->toBe(1);
+        ->and(Client::where('name', 'ACOPIO Internal Tests')->count())->toBe(1)
+        ->and(Client::where('name', 'ACOPIO API Tokens')->count())->toBe(1);
+});
+
+it('creates a personal access client for the api user provider', function (): void {
+    $this->artisan('acopio:setup-oauth')->assertSuccessful();
+
+    $personal = Client::where('name', 'ACOPIO API Tokens')->first();
+
+    expect($personal)->not->toBeNull()
+        ->and($personal->provider)->toBe('users')
+        ->and($personal->grant_types)->toContain('personal_access');
 });
