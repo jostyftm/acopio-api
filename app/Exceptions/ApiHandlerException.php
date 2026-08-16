@@ -6,6 +6,7 @@ use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Configuration\Exceptions;
+use Illuminate\Http\Exceptions\ThrottleRequestsException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
@@ -49,6 +50,7 @@ class ApiHandlerException
             $e instanceof AuthorizationException => [403, __('messages.forbidden'), []],
             $e instanceof NotFoundHttpException => [404, __('messages.not_found'), []],
             $e instanceof ModelNotFoundException => [404, __('messages.not_found'), []],
+            $e instanceof ThrottleRequestsException => [429, __('messages.rate_limited'), []],
             $e instanceof HttpExceptionInterface => [$e->getStatusCode(), $e->getMessage(), []],
             default => [500, __('messages.internal_error'), []],
         };
