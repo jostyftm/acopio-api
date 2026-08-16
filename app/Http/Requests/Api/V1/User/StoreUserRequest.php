@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Api\V1\User;
 
+use App\Models\User;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -14,7 +15,7 @@ class StoreUserRequest extends FormRequest
     {
         $user = $this->user();
 
-        if ($user === null || ! $user->can('users.manage')) {
+        if ($user === null || ! $user->can('create', User::class)) {
             return false;
         }
 

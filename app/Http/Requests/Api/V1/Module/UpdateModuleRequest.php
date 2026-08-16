@@ -12,7 +12,7 @@ class UpdateModuleRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return $this->user()?->can('modules.manage') ?? false;
+        return $this->user()?->can('update', $this->route('module')) ?? false;
     }
 
     /**

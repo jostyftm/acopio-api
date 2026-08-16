@@ -9,26 +9,26 @@ class OrganizationPolicy
 {
     public function viewAny(User $user): bool
     {
-        return $user->can('organizations.manage');
+        return $user->can('organizations.list');
     }
 
     public function view(User $user, Organization $organization): bool
     {
-        return $user->can('organizations.manage');
+        return $user->can('organizations.view');
     }
 
     public function create(User $user): bool
     {
-        return $user->can('organizations.manage');
+        return $user->can('organizations.create');
     }
 
     public function update(User $user, Organization $organization): bool
     {
-        return $user->can('organizations.manage');
+        return $user->can('organizations.update');
     }
 
     public function delete(User $user, Organization $organization): bool
     {
-        return $user->can('organizations.manage');
+        return $user->can('organizations.delete');
     }
 }

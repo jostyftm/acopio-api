@@ -9,7 +9,7 @@ class PersonPolicy
 {
     public function viewAny(User $user): bool
     {
-        return $user->can('people.view');
+        return $user->can('people.list');
     }
 
     public function view(User $user, Person $person): bool

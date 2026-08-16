@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Api\V1\OrganizationType;
 
+use App\Models\OrganizationType;
 use Illuminate\Foundation\Http\FormRequest;
 
 class StoreOrganizationTypeRequest extends FormRequest
@@ -11,7 +12,7 @@ class StoreOrganizationTypeRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return $this->user()?->hasRole('admin', 'api') ?? false;
+        return $this->user()?->can('create', OrganizationType::class) ?? false;
     }
 
     /**

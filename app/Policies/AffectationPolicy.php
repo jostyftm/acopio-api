@@ -9,16 +9,26 @@ class AffectationPolicy
 {
     public function viewAny(User $user): bool
     {
-        return $user->can('afectaciones.view');
+        return $user->can('affectations.list');
     }
 
     public function view(User $user, Affectation $affectation): bool
     {
-        return $user->can('afectaciones.view');
+        return $user->can('affectations.view');
+    }
+
+    public function create(User $user): bool
+    {
+        return $user->can('affectations.create');
     }
 
     public function update(User $user, Affectation $affectation): bool
     {
-        return $user->can('afectaciones.update');
+        return $user->can('affectations.update');
+    }
+
+    public function delete(User $user, Affectation $affectation): bool
+    {
+        return $user->can('affectations.delete');
     }
 }

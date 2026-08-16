@@ -20,7 +20,7 @@ it('returns only accessible modules for a viewer', function () {
     $response = $this->getJson('/api/v1/me/modules')->assertOk()->assertJsonCount(4, 'data');
 
     $keys = collect($response->json('data'))->pluck('key')->all();
-    expect($keys)->toBe(['dashboard', 'people', 'search-reports', 'afectaciones']);
+    expect($keys)->toBe(['dashboard', 'people', 'search-reports', 'affectations']);
 });
 
 it('maps permissions as booleans per action', function () {
@@ -64,10 +64,12 @@ it('hides the system group for organization admins without management access', f
         ->assertJsonPath('data.2.key', 'search-reports')
         ->assertJsonPath('data.3.key', 'facilities')
         ->assertJsonPath('data.4.key', 'users')
-        ->assertJsonPath('data.5.key', 'afectaciones')
+        ->assertJsonPath('data.5.key', 'affectations')
         ->assertJsonPath('data.5.permissions.view', true)
+        ->assertJsonPath('data.5.permissions.list', true)
         ->assertJsonPath('data.5.permissions.create', true)
-        ->assertJsonPath('data.5.permissions.update', true);
+        ->assertJsonPath('data.5.permissions.update', true)
+        ->assertJsonPath('data.5.permissions.delete', false);
 
     $keys = collect($response->json('data'))->pluck('key')->all();
     expect($keys)->not->toContain('system');

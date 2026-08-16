@@ -16,7 +16,7 @@ class UpdateFacilityRequest extends FormRequest
         $user = $this->user();
         $facility = $this->route('facility');
 
-        if ($user === null || ! $user->can('facilities.manage')) {
+        if ($user === null || $facility === null || ! $user->can('update', $facility)) {
             return false;
         }
 
@@ -24,8 +24,7 @@ class UpdateFacilityRequest extends FormRequest
             return true;
         }
 
-        $inOwnOrg = $facility !== null
-            && (int) $facility->organization_id === (int) $user->organization_id;
+        $inOwnOrg = (int) $facility->organization_id === (int) $user->organization_id;
 
         if (! $inOwnOrg) {
             return false;

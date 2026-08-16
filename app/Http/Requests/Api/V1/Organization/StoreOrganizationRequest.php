@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Api\V1\Organization;
 
 use App\Enums\OrganizationStatus;
+use App\Models\Organization;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -13,7 +14,7 @@ class StoreOrganizationRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return $this->user()?->can('organizations.manage') ?? false;
+        return $this->user()?->can('create', Organization::class) ?? false;
     }
 
     /**

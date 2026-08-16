@@ -13,7 +13,7 @@ class UpdateSearchReportRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return $this->user()?->can('manage', $this->route('search_report')) ?? false;
+        return $this->user()?->can('update', $this->route('search_report')) ?? false;
     }
 
     /**

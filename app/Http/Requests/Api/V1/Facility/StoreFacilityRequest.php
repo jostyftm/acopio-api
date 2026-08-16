@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Api\V1\Facility;
 
 use App\Enums\FacilityStatus;
+use App\Models\Facility;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -15,7 +16,7 @@ class StoreFacilityRequest extends FormRequest
     {
         $user = $this->user();
 
-        if ($user === null || ! $user->can('facilities.manage')) {
+        if ($user === null || ! $user->can('create', Facility::class)) {
             return false;
         }
 

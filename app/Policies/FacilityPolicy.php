@@ -9,22 +9,22 @@ class FacilityPolicy
 {
     public function viewAny(User $user): bool
     {
-        return $user->can('facilities.manage');
+        return $user->can('facilities.list');
     }
 
     public function view(User $user, Facility $facility): bool
     {
-        return $user->can('facilities.manage');
+        return $user->can('facilities.view');
     }
 
     public function create(User $user): bool
     {
-        return $user->can('facilities.manage');
+        return $user->can('facilities.create');
     }
 
     public function update(User $user, Facility $facility): bool
     {
-        if (! $user->can('facilities.manage')) {
+        if (! $user->can('facilities.update')) {
             return false;
         }
 
@@ -34,7 +34,7 @@ class FacilityPolicy
 
     public function delete(User $user, Facility $facility): bool
     {
-        if (! $user->can('facilities.manage')) {
+        if (! $user->can('facilities.delete')) {
             return false;
         }
 

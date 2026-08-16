@@ -8,29 +8,29 @@ class UserPolicy
 {
     public function viewAny(User $user): bool
     {
-        return $user->can('users.manage');
+        return $user->can('users.list');
     }
 
     public function view(User $user, User $model): bool
     {
-        return $user->can('users.manage')
+        return $user->can('users.view')
             && ($user->hasRole('admin', 'api') || $this->sameOrganization($user, $model));
     }
 
     public function create(User $user): bool
     {
-        return $user->can('users.manage');
+        return $user->can('users.create');
     }
 
     public function update(User $user, User $model): bool
     {
-        return $user->can('users.manage')
+        return $user->can('users.update')
             && ($user->hasRole('admin', 'api') || $this->sameOrganization($user, $model));
     }
 
     public function delete(User $user, User $model): bool
     {
-        if (! $user->can('users.manage')) {
+        if (! $user->can('users.delete')) {
             return false;
         }
 

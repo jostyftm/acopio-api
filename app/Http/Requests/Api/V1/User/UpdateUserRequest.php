@@ -15,7 +15,7 @@ class UpdateUserRequest extends FormRequest
         $user = $this->user();
         $target = $this->route('user');
 
-        if ($user === null || ! $user->can('users.manage')) {
+        if ($user === null || $target === null || ! $user->can('update', $target)) {
             return false;
         }
 
@@ -23,8 +23,7 @@ class UpdateUserRequest extends FormRequest
             return true;
         }
 
-        return $target !== null
-            && (int) $target->organization_id === (int) $user->organization_id
+        return (int) $target->organization_id === (int) $user->organization_id
             && ($this->input('organization_id') === null
                 || (int) $this->input('organization_id') === (int) $user->organization_id);
     }

@@ -9,7 +9,7 @@ class SearchReportPolicy
 {
     public function viewAny(User $user): bool
     {
-        return $user->can('search-reports.view');
+        return $user->can('search-reports.list');
     }
 
     public function view(User $user, SearchReport $searchReport): bool
@@ -19,11 +19,16 @@ class SearchReportPolicy
 
     public function create(User $user): bool
     {
-        return true;
+        return $user->can('search-reports.create');
     }
 
-    public function manage(User $user, SearchReport $searchReport): bool
+    public function update(User $user, SearchReport $searchReport): bool
     {
-        return $user->can('search-reports.manage');
+        return $user->can('search-reports.update');
+    }
+
+    public function delete(User $user, SearchReport $searchReport): bool
+    {
+        return $user->can('search-reports.delete');
     }
 }

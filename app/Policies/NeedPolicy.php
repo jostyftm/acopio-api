@@ -12,6 +12,11 @@ class NeedPolicy
         return $user->can('needs.manage');
     }
 
+    public function manage(User $user): bool
+    {
+        return $user->can('needs.manage');
+    }
+
     public function viewAny(User $user, ?Need $need = null): bool
     {
         return true;

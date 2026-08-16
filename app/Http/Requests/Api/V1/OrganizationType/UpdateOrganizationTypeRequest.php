@@ -12,7 +12,7 @@ class UpdateOrganizationTypeRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return $this->user()?->hasRole('admin', 'api') ?? false;
+        return $this->user()?->can('update', $this->route('type')) ?? false;
     }
 
     /**

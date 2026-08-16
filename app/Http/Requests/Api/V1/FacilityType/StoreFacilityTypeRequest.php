@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Api\V1\FacilityType;
 
+use App\Models\FacilityType;
 use Illuminate\Foundation\Http\FormRequest;
 
 class StoreFacilityTypeRequest extends FormRequest
@@ -11,7 +12,7 @@ class StoreFacilityTypeRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return $this->user()?->hasRole('admin', 'api') ?? false;
+        return $this->user()?->can('create', FacilityType::class) ?? false;
     }
 
     /**
