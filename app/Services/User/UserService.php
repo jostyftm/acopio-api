@@ -52,4 +52,22 @@ class UserService
 
         return $user->fresh();
     }
+
+    /**
+     * Actualiza el perfil del propio usuario.
+     *
+     * Solo permite modificar nombre y correo, sin tocar roles,
+     * organización ni estado.
+     *
+     * @param  array{name: string, email: string}  $data
+     */
+    public function updateProfile(User $user, array $data): User
+    {
+        $user->update([
+            'name' => $data['name'],
+            'email' => $data['email'],
+        ]);
+
+        return $user->fresh();
+    }
 }

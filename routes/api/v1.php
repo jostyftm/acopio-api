@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\V1\Affectation\AffectationController;
 use App\Http\Controllers\Api\V1\Auth\LoginController;
+use App\Http\Controllers\Api\V1\Auth\LogoutController;
 use App\Http\Controllers\Api\V1\Auth\MeController;
 use App\Http\Controllers\Api\V1\Auth\SocialLoginController;
 use App\Http\Controllers\Api\V1\Department\DepartmentController;
@@ -59,6 +60,9 @@ Route::name('api.v1.')->group(function (): void {
     // Authenticated endpoints.
     Route::middleware(['auth:api', 'throttle:auth'])->group(function (): void {
         Route::get('me', MeController::class)->name('me');
+        Route::put('me', [MeController::class, 'update'])->name('me.update');
+        Route::post('me/password', [MeController::class, 'password'])->name('me.password');
+        Route::post('auth/logout', LogoutController::class)->name('auth.logout');
 
         Route::get('stats', [StatsController::class, 'show'])->name('stats.show');
 
