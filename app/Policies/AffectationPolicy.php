@@ -7,8 +7,18 @@ use App\Models\User;
 
 class AffectationPolicy
 {
+    public function viewAny(User $user): bool
+    {
+        return $user->can('afectaciones.view');
+    }
+
+    public function view(User $user, Affectation $affectation): bool
+    {
+        return $user->can('afectaciones.view');
+    }
+
     public function update(User $user, Affectation $affectation): bool
     {
-        return $user->can('people.update');
+        return $user->can('afectaciones.update');
     }
 }

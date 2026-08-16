@@ -124,7 +124,7 @@ it('updates severity, needs and location via PUT', function () {
         'longitude' => -75.6,
         'evidence' => [UploadedFile::fake()->image('foto.jpg')],
     ])->assertOk()
-        ->assertJsonPath('data.severity', 'total');
+        ->assertJsonPath('data.attributes.severity', 'total');
 
     $affectation->refresh();
     $affectation->load(['needs', 'evidence']);
@@ -149,6 +149,70 @@ it('rejects updating an affectation without permission', function () {
     $affectation = Person::factory()->create()->affectation()->create(['severity' => 'partial']);
 
     $this->putJson("/api/v1/affectations/{$affectation->id}", ['severity' => 'total'])->assertForbidden();
+});
+
+it('lists affectations with the person relationship', function () {
+    $this->seed(RolePermissionSeeder::class);
+
+    $admin = makeUserWithRole('admin');
+    Passport::actingAs($admin);
+
+    $this->post('/api/v1/registrations', [
+        ...baseRegistrationPayload(),
+        'severity' => 'partial',
+        'description' => 'Techo destruido',
+    ])->assertCreated();
+
+    $this->getJson('/api/v1/affectations')
+        ->assertOk()
+        ->assertJsonCount(1, 'data')
+        ->assertJsonPath('data.0.attributes.severity', 'partial')
+        ->assertJsonPath('data.0.attributes.description', 'Techo destruido')
+        ->assertJsonPath('data.0.relationships.person.full_name', 'Maria Garcia');
+});
+
+it('shows a single affectation with its detail', function () {
+    $this->seed(RolePermissionSeeder::class);
+
+    $admin = makeUserWithRole('admin');
+    Passport::actingAs($admin);
+
+    $level = SeverityNeed::query()->firstOrCreate(['code_level' => 'medium'], ['display_name' => 'Medio']);
+    $need = Need::query()->create([
+        'name' => 'Comida',
+        'normalized_name' => 'COMIDA',
+        'severity_need_id' => $level->id,
+    ]);
+
+    $this->post('/api/v1/registrations', [
+        ...baseRegistrationPayload(),
+        'severity' => 'total',
+        'incident_latitude' => 6.2,
+        'incident_longitude' => -75.6,
+        'needs' => [$need->id],
+    ])->assertCreated();
+
+    $affectation = Affectation::query()->firstOrFail();
+
+    $this->getJson("/api/v1/affectations/{$affectation->id}")
+        ->assertOk()
+        ->assertJsonPath('data.attributes.severity', 'total')
+        ->assertJsonPath('data.attributes.latitude', 6.2)
+        ->assertJsonPath('data.attributes.needs.0.id', $need->id)
+        ->assertJsonPath('data.relationships.person.document_number', '123456789');
+});
+
+it('rejects listing affectations without permission', function () {
+    $this->seed(RolePermissionSeeder::class);
+
+    $user = User::factory()->create();
+    Passport::actingAs($user);
+
+    $this->getJson('/api/v1/affectations')->assertForbidden();
+});
+
+it('rejects unauthenticated access to affectations', function () {
+    $this->getJson('/api/v1/affectations')->assertStatus(401);
 });
 
 /**

@@ -81,6 +81,10 @@ Route::name('api.v1.')->group(function (): void {
 
         Route::post('needs', [NeedController::class, 'store'])->name('needs.store');
 
+        Route::get('affectations', [AffectationController::class, 'index'])
+            ->name('affectations.index');
+        Route::get('affectations/{affectation}', [AffectationController::class, 'show'])
+            ->name('affectations.show');
         Route::put('affectations/{affectation}', [AffectationController::class, 'update'])
             ->name('affectations.update');
 

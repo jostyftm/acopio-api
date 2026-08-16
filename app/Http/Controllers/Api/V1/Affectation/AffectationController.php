@@ -9,16 +9,50 @@ use App\Models\Affectation;
 use App\Support\ApiResponse;
 use Clickbar\Magellan\Data\Geometries\Point;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class AffectationController extends Controller
 {
+    /**
+     * Lista las afectaciones registradas.
+     *
+     * Requiere permiso de visualización del módulo de afectaciones.
+     */
+    public function index(Request $request): JsonResponse
+    {
+        $this->authorize('viewAny', Affectation::class);
+
+        $affectations = AffectationResource::collection(
+            Affectation::query()
+                ->with(['person.municipality', 'needs'])
+                ->latest('id')
+                ->cursorPaginate($request->integer('per_page', 15)),
+        );
+
+        return ApiResponse::success($affectations);
+    }
+
+    /**
+     * Muestra el detalle de una afectación con la información de la persona.
+     *
+     * Requiere permiso de visualización del módulo de afectaciones.
+     */
+    public function show(Request $request, Affectation $affectation): JsonResponse
+    {
+        $this->authorize('view', $affectation);
+
+        $affectation->load(['person.municipality', 'needs', 'evidence']);
+
+        return ApiResponse::success(AffectationResource::make($affectation));
+    }
+
     /**
      * Actualiza la afectación de una persona.
      *
      * Permite corregir la severidad, descripción, ubicación del incidente
      * (cuando el censo se hizo en un lugar distinto), sincronizar las
      * necesidades y agregar nuevas evidencias. Requiere permiso de
-     * actualización de personas.
+     * actualización del módulo de afectaciones.
      */
     public function update(UpdateAffectationRequest $request, Affectation $affectation): JsonResponse
     {
@@ -55,7 +89,7 @@ class AffectationController extends Controller
             ]);
         }
 
-        $affectation->load(['needs', 'evidence']);
+        $affectation->load(['person.municipality', 'needs', 'evidence']);
 
         return ApiResponse::success(AffectationResource::make($affectation));
     }

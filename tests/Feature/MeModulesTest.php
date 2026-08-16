@@ -17,10 +17,10 @@ it('returns only accessible modules for a viewer', function () {
     $viewer = makeUserWithRole('viewer');
     Passport::actingAs($viewer);
 
-    $response = $this->getJson('/api/v1/me/modules')->assertOk()->assertJsonCount(3, 'data');
+    $response = $this->getJson('/api/v1/me/modules')->assertOk()->assertJsonCount(4, 'data');
 
     $keys = collect($response->json('data'))->pluck('key')->all();
-    expect($keys)->toBe(['dashboard', 'people', 'search-reports']);
+    expect($keys)->toBe(['dashboard', 'people', 'search-reports', 'afectaciones']);
 });
 
 it('maps permissions as booleans per action', function () {
@@ -41,7 +41,7 @@ it('returns the system group with its children only for admins', function () {
     $admin = makeUserWithRole('admin');
     Passport::actingAs($admin);
 
-    $response = $this->getJson('/api/v1/me/modules')->assertOk()->assertJsonCount(7, 'data');
+    $response = $this->getJson('/api/v1/me/modules')->assertOk()->assertJsonCount(8, 'data');
 
     $system = collect($response->json('data'))->firstWhere('key', 'system');
 
@@ -60,10 +60,14 @@ it('hides the system group for organization admins without management access', f
 
     $response = $this->getJson('/api/v1/me/modules')
         ->assertOk()
-        ->assertJsonCount(5, 'data')
+        ->assertJsonCount(6, 'data')
         ->assertJsonPath('data.2.key', 'search-reports')
         ->assertJsonPath('data.3.key', 'facilities')
-        ->assertJsonPath('data.4.key', 'users');
+        ->assertJsonPath('data.4.key', 'users')
+        ->assertJsonPath('data.5.key', 'afectaciones')
+        ->assertJsonPath('data.5.permissions.view', true)
+        ->assertJsonPath('data.5.permissions.create', true)
+        ->assertJsonPath('data.5.permissions.update', true);
 
     $keys = collect($response->json('data'))->pluck('key')->all();
     expect($keys)->not->toContain('system');
@@ -87,7 +91,7 @@ it('hides inactive modules', function () {
 
     $this->getJson('/api/v1/me/modules')
         ->assertOk()
-        ->assertJsonCount(3, 'data');
+        ->assertJsonCount(4, 'data');
 });
 
 it('hides active modules without granted permissions', function () {
@@ -104,7 +108,7 @@ it('hides active modules without granted permissions', function () {
 
     Passport::actingAs($viewer);
 
-    $response = $this->getJson('/api/v1/me/modules')->assertOk()->assertJsonCount(3, 'data');
+    $response = $this->getJson('/api/v1/me/modules')->assertOk()->assertJsonCount(4, 'data');
 
     $keys = collect($response->json('data'))->pluck('key')->all();
     expect($keys)->not->toContain('audit');

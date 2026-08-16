@@ -35,6 +35,9 @@ class RolePermissionSeeder extends Seeder
             'modules.manage',
             'organization-types.manage',
             'facility-types.manage',
+            'afectaciones.view',
+            'afectaciones.create',
+            'afectaciones.update',
         ],
         'org_admin' => [
             'people.view',
@@ -46,6 +49,9 @@ class RolePermissionSeeder extends Seeder
             'users.manage',
             'facilities.manage',
             'dashboard.view',
+            'afectaciones.view',
+            'afectaciones.create',
+            'afectaciones.update',
         ],
         'operator' => [
             'people.view',
@@ -55,11 +61,15 @@ class RolePermissionSeeder extends Seeder
             'search-reports.manage',
             'stats.view',
             'dashboard.view',
+            'afectaciones.view',
+            'afectaciones.create',
+            'afectaciones.update',
         ],
         'viewer' => [
             'people.view',
             'search-reports.view',
             'dashboard.view',
+            'afectaciones.view',
         ],
     ];
 
@@ -124,11 +134,19 @@ class RolePermissionSeeder extends Seeder
             'parent' => null,
             'permissions' => ['users.manage'],
         ],
+        'afectaciones' => [
+            'name' => 'Afectaciones',
+            'path' => '/afectaciones',
+            'icon' => 'Ambulance',
+            'order' => 7,
+            'parent' => null,
+            'permissions' => ['afectaciones.view', 'afectaciones.create', 'afectaciones.update'],
+        ],
         'system' => [
             'name' => 'Administración del sistema',
             'path' => null,
             'icon' => 'Settings',
-            'order' => 7,
+            'order' => 8,
             'parent' => null,
             'permissions' => [],
         ],

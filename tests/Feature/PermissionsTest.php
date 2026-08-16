@@ -14,8 +14,8 @@ it('lists the permissions with their module', function () {
 
     $this->getJson('/api/v1/permissions')
         ->assertOk()
-        ->assertJsonCount(18, 'data')
-        ->assertJsonPath('data.0.attributes.module.key', 'dashboard');
+        ->assertJsonCount(21, 'data')
+        ->assertJsonPath('data.0.attributes.module.key', 'afectaciones');
 });
 
 it('creates a permission composing the name from the module and action', function () {
