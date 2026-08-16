@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 class Affectation extends Model
 {
@@ -43,9 +44,14 @@ class Affectation extends Model
         return $this->belongsTo(Organization::class);
     }
 
-    public function evidence(): HasMany
+    public function attachments(): MorphMany
     {
-        return $this->hasMany(AffectationEvidence::class);
+        return $this->morphMany(Attachment::class, 'attachable');
+    }
+
+    public function familyMembers(): HasMany
+    {
+        return $this->hasMany(FamilyMember::class);
     }
 
     public function needs(): BelongsToMany

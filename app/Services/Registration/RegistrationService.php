@@ -51,7 +51,7 @@ class RegistrationService
             $this->createAffectation($person, $data, $reporter);
         }
 
-        return $person;
+        return $person->refresh();
     }
 
     /**
@@ -109,12 +109,49 @@ class RegistrationService
         foreach ($data['evidence'] ?? [] as $file) {
             $path = $file->store('evidence/affectations/'.$affectation->id, 's3');
 
-            $affectation->evidence()->create([
+            $affectation->attachments()->create([
                 'file_path' => $path,
                 'original_name' => $file->getClientOriginalName(),
                 'mime' => $file->getMimeType(),
                 'size' => $file->getSize(),
             ]);
+        }
+
+        foreach ($data['family_members'] ?? [] as $index => $member) {
+            $person = $this->findDuplicate($member['document_type'], $member['document_number']);
+
+            if ($person === null) {
+                $person = Person::query()->create([
+                    'document_type' => $member['document_type'],
+                    'document_number' => $member['document_number'],
+                    'first_name' => $member['first_name'],
+                    'last_name' => $member['last_name'],
+                    'birth_date' => $member['birth_date'],
+                    'phone' => null,
+                    'source' => RegistrationSource::Family,
+                    'data_consent' => true,
+                ]);
+                $person->refresh();
+            } elseif ($person->birth_date === null) {
+                $person->update(['birth_date' => $member['birth_date']]);
+                $person->refresh();
+            }
+
+            $affectation->familyMembers()->create([
+                'person_id' => $person->id,
+                'is_householder' => $member['is_householder'] ?? false,
+            ]);
+
+            foreach ($data['family_members'][$index]['evidence'] ?? [] as $file) {
+                $path = $file->store('evidence/family-members/'.$person->id, 's3');
+
+                $person->attachments()->create([
+                    'file_path' => $path,
+                    'original_name' => $file->getClientOriginalName(),
+                    'mime' => $file->getMimeType(),
+                    'size' => $file->getSize(),
+                ]);
+            }
         }
     }
 

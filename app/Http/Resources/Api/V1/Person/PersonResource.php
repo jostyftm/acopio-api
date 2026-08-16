@@ -3,6 +3,7 @@
 namespace App\Http\Resources\Api\V1\Person;
 
 use App\Http\Resources\Api\V1\SearchReport\SearchReportResource;
+use App\Models\FamilyMember;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Str;
@@ -35,6 +36,8 @@ class PersonResource extends JsonResource
             'first_name' => $this->first_name,
             'last_name' => $this->last_name,
             'full_name' => $this->full_name,
+            'birth_date' => $this->birth_date?->format('Y-m-d'),
+            'current_age' => $this->current_age,
             'phone' => $this->phone,
             'municipality' => $this->municipalityName(),
             'neighborhood' => $this->neighborhood,
@@ -73,12 +76,34 @@ class PersonResource extends JsonResource
                     'needs' => $this->affectation->needs->map(
                         fn ($need): array => ['id' => $need->id, 'name' => $need->name],
                     )->values(),
-                    'evidence' => $this->affectation->evidence->map(
+                    'evidence' => $this->affectation->attachments->map(
                         fn ($file): array => [
                             'id' => $file->id,
                             'url' => $file->url,
                             'original_name' => $file->original_name,
                             'mime' => $file->mime,
+                        ],
+                    )->values(),
+                    'family_members' => $this->affectation->familyMembers->map(
+                        fn (FamilyMember $member): array => [
+                            'id' => $member->id,
+                            'is_householder' => $member->is_householder,
+                            'person' => $member->person === null ? null : [
+                                'id' => $member->person->id,
+                                'document_type' => $member->person->document_type?->value,
+                                'document_number' => $member->person->document_number,
+                                'full_name' => $member->person->full_name,
+                                'birth_date' => $member->person->birth_date?->format('Y-m-d'),
+                                'current_age' => $member->person->current_age,
+                                'evidence' => $member->person->attachments->map(
+                                    fn ($file): array => [
+                                        'id' => $file->id,
+                                        'url' => $file->url,
+                                        'original_name' => $file->original_name,
+                                        'mime' => $file->mime,
+                                    ],
+                                )->values(),
+                            ],
                         ],
                     )->values(),
                 ]),

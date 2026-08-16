@@ -57,6 +57,13 @@ class StoreRegistrationRequest extends FormRequest
             'last_name' => ['required', 'string', 'max:120'],
 
             /**
+             * Birth date of the affected person.
+             *
+             * @example 1990-05-10
+             */
+            'birth_date' => ['required', 'date', 'before_or_equal:today'],
+
+            /**
              * Contact phone number (optional country code +57).
              *
              * @example 573001234567
@@ -155,6 +162,63 @@ class StoreRegistrationRequest extends FormRequest
              */
             'evidence' => ['nullable', 'array', 'max:'.config('evidence.max_files')],
             'evidence.*' => ['file', 'mimetypes:image/jpeg,image/png,image/webp,image/gif,video/mp4,video/quicktime,video/webm', new EvidenceFile],
+
+            /**
+             * Members of the affected person's family group.
+             *
+             * @example
+             */
+            'family_members' => ['nullable', 'array', 'max:20'],
+
+            /**
+             * Document type of the family member.
+             *
+             * @example CC
+             */
+            'family_members.*.document_type' => ['required', Rule::in(DocumentType::values())],
+
+            /**
+             * Document number of the family member.
+             *
+             * @example 123456789
+             */
+            'family_members.*.document_number' => ['required', 'string', 'max:32', 'alpha_num'],
+
+            /**
+             * First name of the family member.
+             *
+             * @example Juan
+             */
+            'family_members.*.first_name' => ['required', 'string', 'max:120'],
+
+            /**
+             * Last name of the family member.
+             *
+             * @example Perez
+             */
+            'family_members.*.last_name' => ['required', 'string', 'max:120'],
+
+            /**
+             * Birth date of the family member.
+             *
+             * @example 2010-03-15
+             */
+            'family_members.*.birth_date' => ['required', 'date', 'before_or_equal:today'],
+
+            /**
+             * Whether the family member is the household head.
+             *
+             * @example false
+             */
+            'family_members.*.is_householder' => ['sometimes', 'boolean'],
+
+            /**
+             * Evidence files of the family member.
+             *
+             * @example
+             */
+            'family_members.*.evidence' => ['nullable', 'array', 'max:'.config('evidence.max_files')],
+            'family_members.*.evidence.*' => ['file', 'mimetypes:image/jpeg,image/png,image/webp,image/gif,video/mp4,video/quicktime,video/webm', new EvidenceFile],
 
             /**
              * Special needs of the person.

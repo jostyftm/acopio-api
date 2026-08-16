@@ -32,6 +32,7 @@ class PublicPersonResource extends JsonResource
         $attributes = [
             'full_name' => $this->full_name,
             'masked_document_number' => $this->maskDocumentNumber(),
+            'current_age' => $this->current_age,
             'municipality' => $this->municipality === null
                 ? null
                 : Str::title(mb_strtolower($this->municipality->name)),

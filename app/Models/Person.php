@@ -14,6 +14,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Support\Str;
 
 class Person extends Model
@@ -26,6 +27,7 @@ class Person extends Model
         'document_number',
         'first_name',
         'last_name',
+        'birth_date',
         'phone',
         'neighborhood',
         'address',
@@ -48,6 +50,8 @@ class Person extends Model
             'status' => PersonStatus::class,
             'source' => RegistrationSource::class,
             'sector' => Sector::class,
+            'birth_date' => 'date',
+            'current_age' => 'integer',
             'special_needs' => 'array',
             'data_consent' => 'boolean',
             'location' => Point::class,
@@ -69,6 +73,16 @@ class Person extends Model
     public function affectation(): HasOne
     {
         return $this->hasOne(Affectation::class);
+    }
+
+    public function familyMembers(): HasMany
+    {
+        return $this->hasMany(FamilyMember::class);
+    }
+
+    public function attachments(): MorphMany
+    {
+        return $this->morphMany(Attachment::class, 'attachable');
     }
 
     public function searchReports(): HasMany

@@ -10,6 +10,7 @@ use App\Models\SeverityNeed;
 use App\Models\User;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
 use Laravel\Passport\Passport;
 use Spatie\Permission\Models\Role;
@@ -45,11 +46,11 @@ it('creates an affectation with needs and evidence when registering a person', f
     expect($affectation->severity)->toBe(AffectationSeverity::Partial)
         ->and($affectation->description)->toBe('Techo destruido')
         ->and($affectation->needs->contains($need))->toBeTrue()
-        ->and($affectation->evidence)->toHaveCount(1)
-        ->and($affectation->evidence->first()->original_name)->toBe('danos.jpg')
-        ->and($affectation->evidence->first()->mime)->toBe('image/jpeg');
+        ->and($affectation->attachments)->toHaveCount(1)
+        ->and($affectation->attachments->first()->original_name)->toBe('danos.jpg')
+        ->and($affectation->attachments->first()->mime)->toBe('image/jpeg');
 
-    Storage::disk('s3')->assertExists($affectation->evidence->first()->file_path);
+    Storage::disk('s3')->assertExists($affectation->attachments->first()->file_path);
 });
 
 it('stores the incident location on the affectation', function () {
@@ -173,16 +174,16 @@ it('updates severity, needs and location via PUT', function () {
         ->assertJsonPath('data.attributes.severity', 'total');
 
     $affectation->refresh();
-    $affectation->load(['needs', 'evidence']);
+    $affectation->load(['needs', 'attachments']);
 
     expect($affectation->severity)->toBe(AffectationSeverity::Total)
         ->and($affectation->description)->toBe('Actualizado')
         ->and($affectation->needs->pluck('id')->all())->toBe([$other->id])
         ->and($affectation->latitude)->toBe(6.2)
         ->and($affectation->longitude)->toBe(-75.6)
-        ->and($affectation->evidence)->toHaveCount(1);
+        ->and($affectation->attachments)->toHaveCount(1);
 
-    Storage::disk('s3')->assertExists($affectation->evidence->first()->file_path);
+    Storage::disk('s3')->assertExists($affectation->attachments->first()->file_path);
 });
 
 it('rejects updating an affectation without permission', function () {
@@ -207,7 +208,7 @@ it('deletes an evidence from an affectation', function () {
 
     $affectation = Person::factory()->create()->affectation()->create(['severity' => 'partial']);
     Storage::disk('s3')->put('evidence/affectations/1/danos.jpg', 'contenido');
-    $evidence = $affectation->evidence()->create([
+    $evidence = $affectation->attachments()->create([
         'file_path' => 'evidence/affectations/1/danos.jpg',
         'original_name' => 'danos.jpg',
         'mime' => 'image/jpeg',
@@ -219,7 +220,7 @@ it('deletes an evidence from an affectation', function () {
         ->assertJsonPath('data.deleted', true);
 
     Storage::disk('s3')->assertMissing('evidence/affectations/1/danos.jpg');
-    expect($affectation->evidence()->count())->toBe(0);
+    expect($affectation->attachments()->count())->toBe(0);
 });
 
 it('rejects deleting an evidence without permission', function () {
@@ -230,7 +231,7 @@ it('rejects deleting an evidence without permission', function () {
     Passport::actingAs($viewer);
 
     $affectation = Person::factory()->create()->affectation()->create(['severity' => 'partial']);
-    $evidence = $affectation->evidence()->create([
+    $evidence = $affectation->attachments()->create([
         'file_path' => 'evidence/affectations/1/danos.jpg',
         'original_name' => 'danos.jpg',
         'mime' => 'image/jpeg',
@@ -248,7 +249,7 @@ it('rejects deleting an evidence that belongs to another affectation', function 
 
     $first = Person::factory()->create()->affectation()->create(['severity' => 'partial']);
     $second = Person::factory()->create()->affectation()->create(['severity' => 'total']);
-    $evidence = $first->evidence()->create([
+    $evidence = $first->attachments()->create([
         'file_path' => 'evidence/affectations/1/danos.jpg',
         'original_name' => 'danos.jpg',
         'mime' => 'image/jpeg',
@@ -421,7 +422,7 @@ it('deletes an affectation and its evidence files', function () {
 
     $affectation = Person::factory()->create()->affectation()->create(['severity' => 'partial']);
     Storage::disk('s3')->put('evidence/affectations/1/danos.jpg', 'contenido');
-    $affectation->evidence()->create([
+    $affectation->attachments()->create([
         'file_path' => 'evidence/affectations/1/danos.jpg',
         'original_name' => 'danos.jpg',
         'mime' => 'image/jpeg',
@@ -491,6 +492,104 @@ it('rejects evidence images that exceed the configured size limit', function () 
         ->assertJsonFragment(['La foto no puede superar los 2MB.']);
 });
 
+it('registers the family group including the censused person as household head', function () {
+    Storage::fake('s3');
+
+    $this->post('/api/v1/registrations', [
+        ...baseRegistrationPayload(),
+        'severity' => 'partial',
+        'family_members' => [
+            [
+                'document_type' => 'CC',
+                'document_number' => '123456789',
+                'first_name' => 'Maria',
+                'last_name' => 'Garcia',
+                'birth_date' => '1995-06-15',
+                'is_householder' => true,
+            ],
+            [
+                'document_type' => 'CC',
+                'document_number' => '987654321',
+                'first_name' => 'Juan',
+                'last_name' => 'Perez',
+                'birth_date' => '2015-08-01',
+                'is_householder' => false,
+                'evidence' => [UploadedFile::fake()->image('hijo.jpg')],
+            ],
+            [
+                'document_type' => 'TI',
+                'document_number' => '1122334455',
+                'first_name' => 'Luisa',
+                'last_name' => 'Garcia',
+                'birth_date' => '2010-03-20',
+            ],
+        ],
+    ])->assertCreated()
+        ->assertJsonPath('data.relationships.affectation.family_members', fn ($members) => is_array($members) && count($members) === 3)
+        ->assertJsonPath('data.relationships.affectation.family_members.0.is_householder', true);
+
+    $main = Person::where('document_number', '123456789')->firstOrFail();
+    $child = Person::where('document_number', '987654321')->firstOrFail();
+    $youngest = Person::where('document_number', '1122334455')->firstOrFail();
+
+    expect($main->affectation()->firstOrFail()->familyMembers)->toHaveCount(3)
+        ->and($child->source->value)->toBe('family')
+        ->and($child->phone)->toBeNull()
+        ->and($child->birth_date?->format('Y-m-d'))->toBe('2015-08-01')
+        ->and($child->current_age)->toBe(Carbon::parse('2015-08-01')->age)
+        ->and($youngest->birth_date?->format('Y-m-d'))->toBe('2010-03-20')
+        ->and($child->attachments)->toHaveCount(1)
+        ->and($child->attachments->first()->original_name)->toBe('hijo.jpg');
+
+    Storage::disk('s3')->assertExists($child->attachments->first()->file_path);
+});
+
+it('reuses an existing person as a family member', function () {
+    Person::factory()->create([
+        'document_type' => 'CC',
+        'document_number' => '987654321',
+        'first_name' => 'Juan',
+        'last_name' => 'Perez',
+    ]);
+
+    $this->post('/api/v1/registrations', [
+        ...baseRegistrationPayload(),
+        'severity' => 'partial',
+        'family_members' => [
+            [
+                'document_type' => 'CC',
+                'document_number' => '987654321',
+                'first_name' => 'Juan',
+                'last_name' => 'Perez',
+                'birth_date' => '1990-01-01',
+                'is_householder' => false,
+            ],
+        ],
+    ])->assertCreated();
+
+    expect(Person::where('document_number', '987654321')->count())->toBe(1);
+
+    $affectation = Person::where('document_number', '123456789')->firstOrFail()->affectation()->firstOrFail();
+    $member = Person::where('document_number', '987654321')->firstOrFail();
+
+    expect($affectation->familyMembers()->where('person_id', $member->id)->exists())->toBeTrue();
+});
+
+it('rejects family members with missing required fields', function () {
+    $this->postJson('/api/v1/registrations', [
+        ...baseRegistrationPayload(),
+        'severity' => 'partial',
+        'family_members' => [
+            [
+                'document_type' => 'CC',
+                'document_number' => '987654321',
+                'first_name' => 'Juan',
+            ],
+        ],
+    ])->assertUnprocessable()
+        ->assertJsonValidationErrors(['family_members.0.last_name', 'family_members.0.birth_date']);
+});
+
 /**
  * @return array<string, mixed>
  */
@@ -501,6 +600,7 @@ function baseRegistrationPayload(): array
         'document_number' => '123456789',
         'first_name' => 'Maria',
         'last_name' => 'Garcia',
+        'birth_date' => '1995-06-15',
         'phone' => '3001234567',
         'municipality' => 'Cali',
         'sector' => 'urban',

@@ -28,7 +28,7 @@ class RegistrationController extends Controller
     public function store(StoreRegistrationRequest $request): JsonResponse
     {
         $person = $this->registrationService->register($request->validated());
-        $person->load(['municipality', 'affectation.needs', 'affectation.evidence']);
+        $person->load(['municipality', 'affectation.needs', 'affectation.attachments', 'affectation.familyMembers.person.attachments']);
 
         return ApiResponse::success(
             PersonResource::make($person),

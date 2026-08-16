@@ -8,7 +8,7 @@ use App\Http\Requests\Api\V1\Affectation\UpdateAffectationRequest;
 use App\Http\Resources\Api\V1\Affectation\AffectationResource;
 use App\Http\Resources\Api\V1\Person\PersonResource;
 use App\Models\Affectation;
-use App\Models\AffectationEvidence;
+use App\Models\Attachment;
 use App\Services\Registration\RegistrationService;
 use App\Support\ApiResponse;
 use Clickbar\Magellan\Data\Geometries\Point;
@@ -40,7 +40,7 @@ class AffectationController extends Controller
             markLocated: true,
             reporter: $request->user(),
         );
-        $person->load(['municipality', 'affectation.needs', 'affectation.evidence']);
+        $person->load(['municipality', 'affectation.needs', 'affectation.attachments', 'affectation.familyMembers.person.attachments']);
 
         return ApiResponse::success(
             PersonResource::make($person),
@@ -86,7 +86,7 @@ class AffectationController extends Controller
     {
         $this->authorize('view', $affectation);
 
-        $affectation->load(['person.municipality', 'needs', 'evidence', 'reporter', 'organization']);
+        $affectation->load(['person.municipality', 'needs', 'attachments', 'reporter', 'organization', 'familyMembers.person.attachments']);
 
         return ApiResponse::success(AffectationResource::make($affectation));
     }
@@ -126,7 +126,7 @@ class AffectationController extends Controller
         foreach ($request->file('evidence', []) as $file) {
             $path = $file->store('evidence/affectations/'.$affectation->id, 's3');
 
-            $affectation->evidence()->create([
+            $affectation->attachments()->create([
                 'file_path' => $path,
                 'original_name' => $file->getClientOriginalName(),
                 'mime' => $file->getMimeType(),
@@ -134,7 +134,7 @@ class AffectationController extends Controller
             ]);
         }
 
-        $affectation->load(['person.municipality', 'needs', 'evidence', 'reporter', 'organization']);
+        $affectation->load(['person.municipality', 'needs', 'attachments', 'reporter', 'organization', 'familyMembers.person.attachments']);
 
         return ApiResponse::success(AffectationResource::make($affectation));
     }
@@ -150,8 +150,8 @@ class AffectationController extends Controller
     {
         $this->authorize('delete', $affectation);
 
-        foreach ($affectation->evidence as $evidence) {
-            Storage::disk('s3')->delete($evidence->file_path);
+        foreach ($affectation->attachments as $attachment) {
+            Storage::disk('s3')->delete($attachment->file_path);
         }
 
         $affectation->delete();
@@ -165,12 +165,13 @@ class AffectationController extends Controller
      * Quita el archivo del almacenamiento y registra el borrado. Requiere
      * permiso de actualización del módulo de afectaciones.
      */
-    public function destroyEvidence(Request $request, Affectation $affectation, AffectationEvidence $evidence): JsonResponse
+    public function destroyEvidence(Request $request, Affectation $affectation, Attachment $evidence): JsonResponse
     {
         $this->authorize('update', $affectation);
 
         abort_if(
-            $evidence->affectation_id !== $affectation->id,
+            $evidence->attachable_type !== Affectation::class
+                || $evidence->attachable_id !== $affectation->id,
             JsonResponse::HTTP_NOT_FOUND,
         );
 

@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Person;
+use Illuminate\Support\Carbon;
 
 it('registers a person publicly', function () {
     $response = $this->postJson('/api/v1/registrations', [
@@ -8,6 +9,7 @@ it('registers a person publicly', function () {
         'document_number' => '123456789',
         'first_name' => 'Maria',
         'last_name' => 'Garcia',
+        'birth_date' => '1995-06-15',
         'phone' => '3001234567',
         'municipality' => 'Buenaventura',
         'neighborhood' => 'La Playita',
@@ -40,6 +42,7 @@ it('returns the existing record when the document is already registered', functi
         'document_number' => '123456789',
         'first_name' => 'Maria',
         'last_name' => 'Garcia',
+        'birth_date' => '1995-06-15',
         'phone' => '3001234567',
         'municipality' => 'Buenaventura',
         'sector' => 'urban',
@@ -83,6 +86,7 @@ it('accepts phone numbers with the +57 country code', function () {
         'document_number' => '123456789',
         'first_name' => 'Maria',
         'last_name' => 'Garcia',
+        'birth_date' => '1995-06-15',
         'phone' => '+573001234567',
         'municipality' => 'Buenaventura',
         'sector' => 'urban',
@@ -97,6 +101,7 @@ it('rejects spam submissions via the honeypot field', function () {
         'document_number' => '123456789',
         'first_name' => 'Maria',
         'last_name' => 'Garcia',
+        'birth_date' => '1995-06-15',
         'phone' => '3001234567',
         'municipality' => 'Buenaventura',
         'sector' => 'urban',
@@ -114,4 +119,35 @@ it('returns a validation envelope with 422 status', function () {
             'message' => __('messages.validation'),
         ])
         ->assertJsonStructure(['errors' => ['document_type', 'first_name']]);
+});
+
+it('requires a birth date for every new person', function () {
+    $this->postJson('/api/v1/registrations', [
+        'document_type' => 'CC',
+        'document_number' => '123456789',
+        'first_name' => 'Maria',
+        'last_name' => 'Garcia',
+        'phone' => '3001234567',
+        'municipality' => 'Buenaventura',
+        'sector' => 'urban',
+        'severity' => 'partial',
+        'data_consent' => true,
+    ])->assertUnprocessable()->assertJsonValidationErrors('birth_date');
+});
+
+it('stores the birth date and computes the current age', function () {
+    $this->postJson('/api/v1/registrations', [
+        'document_type' => 'CC',
+        'document_number' => '123456789',
+        'first_name' => 'Maria',
+        'last_name' => 'Garcia',
+        'birth_date' => '1995-06-15',
+        'phone' => '3001234567',
+        'municipality' => 'Buenaventura',
+        'sector' => 'urban',
+        'severity' => 'partial',
+        'data_consent' => true,
+    ])->assertCreated()
+        ->assertJsonPath('data.attributes.birth_date', '1995-06-15')
+        ->assertJsonPath('data.attributes.current_age', Carbon::parse('1995-06-15')->age);
 });

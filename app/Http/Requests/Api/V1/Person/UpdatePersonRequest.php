@@ -56,6 +56,13 @@ class UpdatePersonRequest extends FormRequest
             'last_name' => ['sometimes', 'string', 'max:120'],
 
             /**
+             * Birth date of the affected person.
+             *
+             * @example 1990-05-10
+             */
+            'birth_date' => ['sometimes', 'date', 'before_or_equal:today'],
+
+            /**
              * Contact phone number (optional country code +57).
              *
              * @example 573001234567
