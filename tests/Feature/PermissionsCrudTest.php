@@ -49,6 +49,7 @@ it('maps every module CRUD action to its policy method', function () {
         'organizations' => OrganizationPolicy::class,
         'facilities' => FacilityPolicy::class,
         'users' => UserPolicy::class,
+        'my-staff' => UserPolicy::class,
         'affectations' => AffectationPolicy::class,
         'roles' => RolePolicy::class,
         'permissions' => PermissionPolicy::class,

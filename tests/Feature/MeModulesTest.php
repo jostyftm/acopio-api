@@ -63,13 +63,13 @@ it('hides the system group for organization admins without management access', f
         ->assertJsonCount(6, 'data')
         ->assertJsonPath('data.2.key', 'search-reports')
         ->assertJsonPath('data.3.key', 'facilities')
-        ->assertJsonPath('data.4.key', 'users')
+        ->assertJsonPath('data.4.key', 'my-staff')
         ->assertJsonPath('data.5.key', 'affectations')
         ->assertJsonPath('data.5.permissions.view', true)
         ->assertJsonPath('data.5.permissions.list', true)
         ->assertJsonPath('data.5.permissions.create', true)
         ->assertJsonPath('data.5.permissions.update', true)
-        ->assertJsonPath('data.5.permissions.delete', false);
+        ->assertJsonPath('data.5.permissions.delete', true);
 
     $keys = collect($response->json('data'))->pluck('key')->all();
     expect($keys)->not->toContain('system');

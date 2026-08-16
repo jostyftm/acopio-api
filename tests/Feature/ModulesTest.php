@@ -14,10 +14,10 @@ it('lists the module tree for an admin', function () {
 
     $this->getJson('/api/v1/modules')
         ->assertOk()
-        ->assertJsonCount(8, 'data')
+        ->assertJsonCount(9, 'data')
         ->assertJsonPath('data.0.attributes.key', 'dashboard')
-        ->assertJsonPath('data.7.attributes.key', 'system')
-        ->assertJsonCount(5, 'data.7.attributes.children');
+        ->assertJsonPath('data.8.attributes.key', 'system')
+        ->assertJsonCount(5, 'data.8.attributes.children');
 });
 
 it('creates a module', function () {
