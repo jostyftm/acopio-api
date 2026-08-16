@@ -21,6 +21,8 @@ class AffectationResource extends JsonResource
             'type' => 'affectation',
             'attributes' => [
                 'person_id' => $this->person_id,
+                'reported_by' => $this->reported_by,
+                'organization_id' => $this->organization_id,
                 'severity' => $this->severity?->value,
                 'description' => $this->description,
                 'latitude' => $this->latitude,
@@ -54,6 +56,19 @@ class AffectationResource extends JsonResource
                         'neighborhood' => $this->person->neighborhood,
                         'address' => $this->person->address,
                         'sector' => $this->person->sector?->value,
+                    ]),
+                'reporter' => $this->whenLoaded('reporter', fn (): ?array => $this->reporter === null
+                    ? null
+                    : [
+                        'id' => $this->reporter->id,
+                        'name' => $this->reporter->name,
+                        'email' => $this->reporter->email,
+                    ]),
+                'organization' => $this->whenLoaded('organization', fn (): ?array => $this->organization === null
+                    ? null
+                    : [
+                        'id' => $this->organization->id,
+                        'name' => $this->organization->name,
                     ]),
             ],
         ];

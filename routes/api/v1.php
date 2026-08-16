@@ -89,6 +89,8 @@ Route::name('api.v1.')->group(function (): void {
             ->name('affectations.show');
         Route::put('affectations/{affectation}', [AffectationController::class, 'update'])
             ->name('affectations.update');
+        Route::delete('affectations/{affectation}', [AffectationController::class, 'destroy'])
+            ->name('affectations.destroy');
         Route::delete('affectations/{affectation}/evidence/{evidence}', [AffectationController::class, 'destroyEvidence'])
             ->name('affectations.evidence.destroy');
 

@@ -8,29 +8,29 @@ class UserPolicy
 {
     public function viewAny(User $user): bool
     {
-        return $user->can('users.list');
+        return $this->can($user, 'list');
     }
 
     public function view(User $user, User $model): bool
     {
-        return $user->can('users.view')
+        return $this->can($user, 'view')
             && ($user->hasRole('admin', 'api') || $this->sameOrganization($user, $model));
     }
 
     public function create(User $user): bool
     {
-        return $user->can('users.create');
+        return $this->can($user, 'create');
     }
 
     public function update(User $user, User $model): bool
     {
-        return $user->can('users.update')
+        return $this->can($user, 'update')
             && ($user->hasRole('admin', 'api') || $this->sameOrganization($user, $model));
     }
 
     public function delete(User $user, User $model): bool
     {
-        if (! $user->can('users.delete')) {
+        if (! $this->can($user, 'delete')) {
             return false;
         }
 
@@ -40,6 +40,13 @@ class UserPolicy
 
         return $this->sameOrganization($user, $model)
             && ! $model->hasAnyRole(['admin', 'org_admin'], 'api');
+    }
+
+    private function can(User $user, string $action): bool
+    {
+        return $user->hasRole('admin', 'api')
+            ? $user->can("users.{$action}")
+            : $user->can("my-staff.{$action}");
     }
 
     private function sameOrganization(User $user, User $model): bool

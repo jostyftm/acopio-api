@@ -6,6 +6,7 @@ use App\Enums\PersonStatus;
 use App\Enums\RegistrationSource;
 use App\Models\Municipality;
 use App\Models\Person;
+use App\Models\User;
 use Clickbar\Magellan\Data\Geometries\Point;
 use Illuminate\Support\Str;
 
@@ -14,7 +15,7 @@ class RegistrationService
     /**
      * @param  array<string, mixed>  $data
      */
-    public function register(array $data, bool $markLocated = false): Person
+    public function register(array $data, bool $markLocated = false, ?User $reporter = null): Person
     {
         $existing = $this->findDuplicate($data['document_type'], $data['document_number']);
 
@@ -47,7 +48,7 @@ class RegistrationService
         ]);
 
         if ($person->wasRecentlyCreated && isset($data['severity'])) {
-            $this->createAffectation($person, $data);
+            $this->createAffectation($person, $data, $reporter);
         }
 
         return $person;
@@ -88,12 +89,14 @@ class RegistrationService
     /**
      * @param  array<string, mixed>  $data
      */
-    private function createAffectation(Person $person, array $data): void
+    private function createAffectation(Person $person, array $data, ?User $reporter = null): void
     {
         $incidentLatitude = isset($data['incident_latitude']) ? (float) $data['incident_latitude'] : null;
         $incidentLongitude = isset($data['incident_longitude']) ? (float) $data['incident_longitude'] : null;
 
         $affectation = $person->affectation()->create([
+            'reported_by' => $reporter?->id,
+            'organization_id' => $reporter?->organization_id,
             'severity' => $data['severity'],
             'description' => $data['description'] ?? null,
             'location' => $this->pointFrom($incidentLatitude, $incidentLongitude),

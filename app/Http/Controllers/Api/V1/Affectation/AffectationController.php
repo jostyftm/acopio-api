@@ -14,6 +14,7 @@ use App\Support\ApiResponse;
 use Clickbar\Magellan\Data\Geometries\Point;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Storage;
 
 class AffectationController extends Controller
@@ -34,7 +35,11 @@ class AffectationController extends Controller
     {
         $this->authorize('create', Affectation::class);
 
-        $person = $this->registrationService->register($request->validated(), markLocated: true);
+        $person = $this->registrationService->register(
+            $request->validated(),
+            markLocated: true,
+            reporter: $request->user(),
+        );
         $person->load(['municipality', 'affectation.needs', 'affectation.evidence']);
 
         return ApiResponse::success(
@@ -53,12 +58,21 @@ class AffectationController extends Controller
     {
         $this->authorize('viewAny', Affectation::class);
 
-        $affectations = AffectationResource::collection(
-            Affectation::query()
-                ->with(['person.municipality', 'needs'])
-                ->latest('id')
-                ->cursorPaginate($request->integer('per_page', 15)),
-        );
+        $query = Affectation::query()
+            ->with(['person.municipality', 'needs', 'reporter', 'organization'])
+            ->latest('id');
+
+        if (! $request->user()->hasRole('admin', 'api')) {
+            $query->where(function ($builder) use ($request) {
+                if ($request->user()->organization_id !== null) {
+                    $builder->where('organization_id', $request->user()->organization_id);
+                }
+
+                $builder->orWhere('reported_by', $request->user()->id);
+            });
+        }
+
+        $affectations = AffectationResource::collection($query->cursorPaginate($request->integer('per_page', 15)));
 
         return ApiResponse::success($affectations);
     }
@@ -72,7 +86,7 @@ class AffectationController extends Controller
     {
         $this->authorize('view', $affectation);
 
-        $affectation->load(['person.municipality', 'needs', 'evidence']);
+        $affectation->load(['person.municipality', 'needs', 'evidence', 'reporter', 'organization']);
 
         return ApiResponse::success(AffectationResource::make($affectation));
     }
@@ -120,9 +134,29 @@ class AffectationController extends Controller
             ]);
         }
 
-        $affectation->load(['person.municipality', 'needs', 'evidence']);
+        $affectation->load(['person.municipality', 'needs', 'evidence', 'reporter', 'organization']);
 
         return ApiResponse::success(AffectationResource::make($affectation));
+    }
+
+    /**
+     * Elimina una afectación.
+     *
+     * Borra la afectación y sus evidencias del almacenamiento. La persona
+     * permanece en el sistema. Requiere permiso de eliminación del módulo
+     * de afectaciones.
+     */
+    public function destroy(Request $request, Affectation $affectation): Response
+    {
+        $this->authorize('delete', $affectation);
+
+        foreach ($affectation->evidence as $evidence) {
+            Storage::disk('s3')->delete($evidence->file_path);
+        }
+
+        $affectation->delete();
+
+        return response()->noContent();
     }
 
     /**

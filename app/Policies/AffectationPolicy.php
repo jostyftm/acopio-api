@@ -14,7 +14,8 @@ class AffectationPolicy
 
     public function view(User $user, Affectation $affectation): bool
     {
-        return $user->can('affectations.view');
+        return $user->can('affectations.view')
+            && $this->inScope($user, $affectation);
     }
 
     public function create(User $user): bool
@@ -24,11 +25,27 @@ class AffectationPolicy
 
     public function update(User $user, Affectation $affectation): bool
     {
-        return $user->can('affectations.update');
+        return $user->can('affectations.update')
+            && $this->inScope($user, $affectation);
     }
 
     public function delete(User $user, Affectation $affectation): bool
     {
-        return $user->can('affectations.delete');
+        return $user->can('affectations.delete')
+            && $this->inScope($user, $affectation);
+    }
+
+    private function inScope(User $user, Affectation $affectation): bool
+    {
+        if ($user->hasRole('admin', 'api')) {
+            return true;
+        }
+
+        if ($affectation->reported_by !== null && (int) $affectation->reported_by === (int) $user->id) {
+            return true;
+        }
+
+        return $affectation->organization_id !== null
+            && (int) $affectation->organization_id === (int) $user->organization_id;
     }
 }

@@ -69,4 +69,9 @@ class User extends Authenticatable
     {
         return $this->hasMany(SearchReport::class, 'handled_by');
     }
+
+    public function reportedAffectations(): HasMany
+    {
+        return $this->hasMany(Affectation::class, 'reported_by');
+    }
 }

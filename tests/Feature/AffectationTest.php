@@ -4,6 +4,7 @@ use App\Enums\AffectationSeverity;
 use App\Models\Affectation;
 use App\Models\Municipality;
 use App\Models\Need;
+use App\Models\Organization;
 use App\Models\Person;
 use App\Models\SeverityNeed;
 use App\Models\User;
@@ -153,7 +154,10 @@ it('updates severity, needs and location via PUT', function () {
         'severity_need_id' => $level->id,
     ]);
     $person = Person::factory()->create();
-    $affectation = $person->affectation()->create(['severity' => 'partial']);
+    $affectation = $person->affectation()->create([
+        'severity' => 'partial',
+        'reported_by' => $operator->id,
+    ]);
     $affectation->needs()->attach($need);
 
     Storage::fake('s3');
@@ -322,6 +326,157 @@ it('rejects listing affectations without permission', function () {
 
 it('rejects unauthenticated access to affectations', function () {
     $this->getJson('/api/v1/affectations')->assertStatus(401);
+});
+
+it('stores the reporting user and its organization on dashboard affectations', function () {
+    $this->seed(RolePermissionSeeder::class);
+
+    $organization = Organization::factory()->create();
+    $operator = User::factory()->create(['organization_id' => $organization->id]);
+    $operator->assignRole(Role::findByName('operator', 'api'));
+    Passport::actingAs($operator);
+
+    $this->postJson('/api/v1/affectations', [
+        ...baseRegistrationPayload(),
+        'severity' => 'partial',
+    ])->assertCreated();
+
+    $affectation = Affectation::query()->firstOrFail();
+
+    expect($affectation->reported_by)->toBe($operator->id)
+        ->and($affectation->organization_id)->toBe($organization->id);
+});
+
+it('scopes the affectation listing to the organization and own reports for non-admins', function () {
+    $this->seed(RolePermissionSeeder::class);
+
+    $orgA = Organization::factory()->create();
+    $orgB = Organization::factory()->create();
+
+    $reporterA = User::factory()->create(['organization_id' => $orgA->id]);
+    $affectationA = Person::factory()->create()->affectation()->create([
+        'severity' => 'partial',
+        'reported_by' => $reporterA->id,
+        'organization_id' => $orgA->id,
+    ]);
+    Person::factory()->create()->affectation()->create([
+        'severity' => 'partial',
+        'reported_by' => null,
+        'organization_id' => $orgB->id,
+    ]);
+
+    $orgAdmin = User::factory()->create(['organization_id' => $orgA->id]);
+    $orgAdmin->assignRole(Role::findByName('org_admin', 'api'));
+    Passport::actingAs($orgAdmin);
+
+    $this->getJson('/api/v1/affectations')
+        ->assertOk()
+        ->assertJsonCount(1, 'data')
+        ->assertJsonPath('data.0.attributes.person_id', $affectationA->person_id);
+});
+
+it('includes own reports for users without an organization', function () {
+    $this->seed(RolePermissionSeeder::class);
+
+    $operator = User::factory()->create();
+    $operator->assignRole(Role::findByName('operator', 'api'));
+    Passport::actingAs($operator);
+
+    $mine = Person::factory()->create()->affectation()->create([
+        'severity' => 'partial',
+        'reported_by' => $operator->id,
+    ]);
+    Person::factory()->create()->affectation()->create(['severity' => 'partial']);
+
+    $this->getJson('/api/v1/affectations')
+        ->assertOk()
+        ->assertJsonCount(1, 'data')
+        ->assertJsonPath('data.0.attributes.person_id', $mine->person_id);
+});
+
+it('rejects viewing an affectation from another organization for non-admins', function () {
+    $this->seed(RolePermissionSeeder::class);
+
+    $organization = Organization::factory()->create();
+    $orgAdmin = User::factory()->create(['organization_id' => $organization->id]);
+    $orgAdmin->assignRole(Role::findByName('org_admin', 'api'));
+    Passport::actingAs($orgAdmin);
+
+    $other = Organization::factory()->create();
+    $affectation = Person::factory()->create()->affectation()->create([
+        'severity' => 'partial',
+        'organization_id' => $other->id,
+    ]);
+
+    $this->getJson("/api/v1/affectations/{$affectation->id}")->assertForbidden();
+});
+
+it('deletes an affectation and its evidence files', function () {
+    $this->seed(RolePermissionSeeder::class);
+
+    $admin = makeUserWithRole('admin');
+    Passport::actingAs($admin);
+
+    Storage::fake('s3');
+
+    $affectation = Person::factory()->create()->affectation()->create(['severity' => 'partial']);
+    Storage::disk('s3')->put('evidence/affectations/1/danos.jpg', 'contenido');
+    $affectation->evidence()->create([
+        'file_path' => 'evidence/affectations/1/danos.jpg',
+        'original_name' => 'danos.jpg',
+        'mime' => 'image/jpeg',
+        'size' => 9,
+    ]);
+
+    $this->deleteJson("/api/v1/affectations/{$affectation->id}")->assertNoContent();
+
+    Storage::disk('s3')->assertMissing('evidence/affectations/1/danos.jpg');
+    expect(Affectation::find($affectation->id))->toBeNull();
+});
+
+it('allows an organization admin to delete an affectation of its organization', function () {
+    $this->seed(RolePermissionSeeder::class);
+
+    $organization = Organization::factory()->create();
+    $orgAdmin = User::factory()->create(['organization_id' => $organization->id]);
+    $orgAdmin->assignRole(Role::findByName('org_admin', 'api'));
+    Passport::actingAs($orgAdmin);
+
+    $affectation = Person::factory()->create()->affectation()->create([
+        'severity' => 'partial',
+        'organization_id' => $organization->id,
+    ]);
+
+    $this->deleteJson("/api/v1/affectations/{$affectation->id}")->assertNoContent();
+});
+
+it('rejects deleting an affectation from another organization', function () {
+    $this->seed(RolePermissionSeeder::class);
+
+    $organization = Organization::factory()->create();
+    $orgAdmin = User::factory()->create(['organization_id' => $organization->id]);
+    $orgAdmin->assignRole(Role::findByName('org_admin', 'api'));
+    Passport::actingAs($orgAdmin);
+
+    $other = Organization::factory()->create();
+    $affectation = Person::factory()->create()->affectation()->create([
+        'severity' => 'partial',
+        'organization_id' => $other->id,
+    ]);
+
+    $this->deleteJson("/api/v1/affectations/{$affectation->id}")->assertForbidden();
+});
+
+it('rejects deleting an affectation without permission', function () {
+    $this->seed(RolePermissionSeeder::class);
+
+    $viewer = User::factory()->create();
+    $viewer->assignRole(Role::findByName('viewer', 'api'));
+    Passport::actingAs($viewer);
+
+    $affectation = Person::factory()->create()->affectation()->create(['severity' => 'partial']);
+
+    $this->deleteJson("/api/v1/affectations/{$affectation->id}")->assertForbidden();
 });
 
 it('rejects evidence images that exceed the configured size limit', function () {

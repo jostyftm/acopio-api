@@ -13,6 +13,8 @@ class Affectation extends Model
 {
     protected $fillable = [
         'person_id',
+        'reported_by',
+        'organization_id',
         'severity',
         'description',
         'location',
@@ -29,6 +31,16 @@ class Affectation extends Model
     public function person(): BelongsTo
     {
         return $this->belongsTo(Person::class);
+    }
+
+    public function reporter(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'reported_by');
+    }
+
+    public function organization(): BelongsTo
+    {
+        return $this->belongsTo(Organization::class);
     }
 
     public function evidence(): HasMany
