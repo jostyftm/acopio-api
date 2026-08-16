@@ -76,6 +76,48 @@ it('does not create an affectation for a duplicate document', function () {
     expect(Affectation::count())->toBe(0);
 });
 
+it('creates an affectation from the dashboard and marks the person as located', function () {
+    $this->seed(RolePermissionSeeder::class);
+
+    $operator = User::factory()->create();
+    $operator->assignRole(Role::findByName('operator', 'api'));
+    Passport::actingAs($operator);
+
+    $this->postJson('/api/v1/affectations', [
+        ...baseRegistrationPayload(),
+        'severity' => 'partial',
+        'description' => 'Techo destruido',
+    ])->assertCreated()
+        ->assertJsonPath('data.attributes.status', 'located')
+        ->assertJsonPath('meta.duplicate', false);
+
+    $person = Person::where('document_number', '123456789')->firstOrFail();
+
+    expect($person->status->value)->toBe('located')
+        ->and($person->located_at)->not->toBeNull()
+        ->and($person->affectation()->firstOrFail()->description)->toBe('Techo destruido');
+});
+
+it('rejects creating an affectation from the dashboard without permission', function () {
+    $this->seed(RolePermissionSeeder::class);
+
+    $viewer = User::factory()->create();
+    $viewer->assignRole(Role::findByName('viewer', 'api'));
+    Passport::actingAs($viewer);
+
+    $this->postJson('/api/v1/affectations', [
+        ...baseRegistrationPayload(),
+        'severity' => 'partial',
+    ])->assertForbidden();
+});
+
+it('rejects creating an affectation from the dashboard when unauthenticated', function () {
+    $this->postJson('/api/v1/affectations', [
+        ...baseRegistrationPayload(),
+        'severity' => 'partial',
+    ])->assertStatus(401);
+});
+
 it('resolves the municipality by code when coordinates do not resolve', function () {
     $this->post('/api/v1/registrations', [
         ...baseRegistrationPayload(),

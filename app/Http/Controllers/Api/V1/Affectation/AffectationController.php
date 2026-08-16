@@ -3,10 +3,13 @@
 namespace App\Http\Controllers\Api\V1\Affectation;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\V1\Affectation\StoreAffectationRequest;
 use App\Http\Requests\Api\V1\Affectation\UpdateAffectationRequest;
 use App\Http\Resources\Api\V1\Affectation\AffectationResource;
+use App\Http\Resources\Api\V1\Person\PersonResource;
 use App\Models\Affectation;
 use App\Models\AffectationEvidence;
+use App\Services\Registration\RegistrationService;
 use App\Support\ApiResponse;
 use Clickbar\Magellan\Data\Geometries\Point;
 use Illuminate\Http\JsonResponse;
@@ -15,6 +18,32 @@ use Illuminate\Support\Facades\Storage;
 
 class AffectationController extends Controller
 {
+    public function __construct(
+        private readonly RegistrationService $registrationService,
+    ) {}
+
+    /**
+     * Registra una persona afectada desde el panel y marca su ubicación.
+     *
+     * Crea la persona y su afectación como localizada (`located`). Si la
+     * persona ya existe por tipo y número de documento, devuelve el registro
+     * existente con el flag `duplicate` en el `meta`. Requiere permiso de
+     * creación del módulo de afectaciones.
+     */
+    public function store(StoreAffectationRequest $request): JsonResponse
+    {
+        $this->authorize('create', Affectation::class);
+
+        $person = $this->registrationService->register($request->validated(), markLocated: true);
+        $person->load(['municipality', 'affectation.needs', 'affectation.evidence']);
+
+        return ApiResponse::success(
+            PersonResource::make($person),
+            ['duplicate' => ! $person->wasRecentlyCreated],
+            $person->wasRecentlyCreated ? 201 : 200,
+        );
+    }
+
     /**
      * Lista las afectaciones registradas.
      *

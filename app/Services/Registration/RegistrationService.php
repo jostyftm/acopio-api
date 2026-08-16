@@ -2,6 +2,7 @@
 
 namespace App\Services\Registration;
 
+use App\Enums\PersonStatus;
 use App\Enums\RegistrationSource;
 use App\Models\Municipality;
 use App\Models\Person;
@@ -13,7 +14,7 @@ class RegistrationService
     /**
      * @param  array<string, mixed>  $data
      */
-    public function register(array $data): Person
+    public function register(array $data, bool $markLocated = false): Person
     {
         $existing = $this->findDuplicate($data['document_type'], $data['document_number']);
 
@@ -38,6 +39,11 @@ class RegistrationService
             ...$data,
             'source' => $data['source'] ?? RegistrationSource::Web,
             'data_consent' => true,
+            ...($markLocated ? [
+                'status' => PersonStatus::Located,
+                'verified_at' => now(),
+                'located_at' => now(),
+            ] : []),
         ]);
 
         if ($person->wasRecentlyCreated && isset($data['severity'])) {
