@@ -16,6 +16,7 @@ return new class extends Migration
             $table->string('name', 120);
             $table->string('normalized_name', 120);
             $table->string('description', 500)->nullable();
+            $table->unsignedBigInteger('severity_need_id')->nullable();
             $table->boolean('active')->default(true);
             $table->timestamps();
 
