@@ -4,16 +4,20 @@ use App\Http\Controllers\Api\V1\Affectation\AffectationController;
 use App\Http\Controllers\Api\V1\Auth\LoginController;
 use App\Http\Controllers\Api\V1\Auth\LogoutController;
 use App\Http\Controllers\Api\V1\Auth\MeController;
+use App\Http\Controllers\Api\V1\Auth\MeModulesController;
 use App\Http\Controllers\Api\V1\Auth\SocialLoginController;
 use App\Http\Controllers\Api\V1\Department\DepartmentController;
 use App\Http\Controllers\Api\V1\Facility\FacilityController;
 use App\Http\Controllers\Api\V1\FacilityType\FacilityTypeController;
+use App\Http\Controllers\Api\V1\Module\ModuleController;
 use App\Http\Controllers\Api\V1\Municipality\MunicipalityController;
 use App\Http\Controllers\Api\V1\Need\NeedController;
 use App\Http\Controllers\Api\V1\Organization\OrganizationController;
 use App\Http\Controllers\Api\V1\OrganizationType\OrganizationTypeController;
+use App\Http\Controllers\Api\V1\Permission\PermissionController;
 use App\Http\Controllers\Api\V1\Person\PersonController;
 use App\Http\Controllers\Api\V1\Registration\RegistrationController;
+use App\Http\Controllers\Api\V1\Role\RoleController;
 use App\Http\Controllers\Api\V1\SearchReport\SearchReportController;
 use App\Http\Controllers\Api\V1\Sms\SmsWebhookController;
 use App\Http\Controllers\Api\V1\Stats\StatsController;
@@ -64,7 +68,13 @@ Route::name('api.v1.')->group(function (): void {
         Route::post('me/password', [MeController::class, 'password'])->name('me.password');
         Route::post('auth/logout', LogoutController::class)->name('auth.logout');
 
+        Route::get('me/modules', MeModulesController::class)->name('me.modules');
+
         Route::get('stats', [StatsController::class, 'show'])->name('stats.show');
+
+        Route::apiResource('modules', ModuleController::class);
+        Route::apiResource('roles', RoleController::class);
+        Route::apiResource('permissions', PermissionController::class);
 
         Route::apiResource('people', PersonController::class)->except(['store']);
         Route::post('people/{person}/verify', [PersonController::class, 'verify'])->name('people.verify');

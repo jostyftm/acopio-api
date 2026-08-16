@@ -11,4 +11,6 @@ return [
     'inactive_user' => 'La cuenta se encuentra desactivada. Contacte al administrador.',
     'wrong_current_password' => 'La contraseña actual es incorrecta.',
     'password_change_not_available' => 'No es posible cambiar la contraseña de una cuenta con acceso institucional.',
+    'permission_exists' => 'Ya existe un permiso con ese nombre para el módulo seleccionado.',
+    'role_in_use' => 'No es posible eliminar un rol asignado a usuarios.',
 ];
