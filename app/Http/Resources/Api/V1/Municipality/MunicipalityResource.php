@@ -16,6 +16,7 @@ class MunicipalityResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
+            'id' => $this->id,
             'code' => $this->code,
             'name' => Str::title(mb_strtolower($this->name)),
             'normalized_name' => $this->normalized_name,

@@ -1,11 +1,16 @@
 <?php
 
 use App\Http\Controllers\Api\V1\Affectation\AffectationController;
+use App\Http\Controllers\Api\V1\Auth\LoginController;
 use App\Http\Controllers\Api\V1\Auth\MeController;
 use App\Http\Controllers\Api\V1\Auth\SocialLoginController;
 use App\Http\Controllers\Api\V1\Department\DepartmentController;
+use App\Http\Controllers\Api\V1\Facility\FacilityController;
+use App\Http\Controllers\Api\V1\FacilityType\FacilityTypeController;
 use App\Http\Controllers\Api\V1\Municipality\MunicipalityController;
 use App\Http\Controllers\Api\V1\Need\NeedController;
+use App\Http\Controllers\Api\V1\Organization\OrganizationController;
+use App\Http\Controllers\Api\V1\OrganizationType\OrganizationTypeController;
 use App\Http\Controllers\Api\V1\Person\PersonController;
 use App\Http\Controllers\Api\V1\Registration\RegistrationController;
 use App\Http\Controllers\Api\V1\SearchReport\SearchReportController;
@@ -20,6 +25,10 @@ Route::name('api.v1.')->group(function (): void {
         ->post('registrations', [RegistrationController::class, 'store'])
         ->name('registrations.store');
 
+    Route::middleware('throttle:public')
+        ->post('auth/login', LoginController::class)
+        ->name('auth.login');
+
     Route::get('registrations/check', [RegistrationController::class, 'check'])
         ->name('registrations.check');
 
@@ -30,6 +39,12 @@ Route::name('api.v1.')->group(function (): void {
     Route::get('departments', [DepartmentController::class, 'index'])->name('departments.index');
 
     Route::get('needs', [NeedController::class, 'index'])->name('needs.index');
+
+    Route::get('organization-types', [OrganizationTypeController::class, 'index'])
+        ->name('organization-types.index');
+
+    Route::get('facility-types', [FacilityTypeController::class, 'index'])
+        ->name('facility-types.index');
 
     Route::get('auth/{provider}/redirect', [SocialLoginController::class, 'redirect'])
         ->name('auth.social.redirect');
@@ -57,5 +72,12 @@ Route::name('api.v1.')->group(function (): void {
 
         Route::apiResource('search-reports', SearchReportController::class)->except(['store', 'destroy']);
         Route::apiResource('users', UserController::class);
+
+        Route::apiResource('organizations', OrganizationController::class);
+
+        Route::apiResource('facilities', FacilityController::class);
+
+        Route::apiResource('organization-types', OrganizationTypeController::class)->except(['index']);
+        Route::apiResource('facility-types', FacilityTypeController::class)->except(['index']);
     });
 });
