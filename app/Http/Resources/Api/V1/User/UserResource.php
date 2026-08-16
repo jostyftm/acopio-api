@@ -32,6 +32,11 @@ class UserResource extends JsonResource
             'email' => $this->email,
             'provider' => $this->provider,
             'roles' => $this->getRoleNames(),
+            'is_active' => $this->is_active,
+            'organization' => $this->whenLoaded('organization', fn () => $this->organization === null ? null : [
+                'id' => $this->organization->id,
+                'name' => $this->organization->name,
+            ]),
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
         ];

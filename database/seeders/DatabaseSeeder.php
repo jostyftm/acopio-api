@@ -2,6 +2,8 @@
 
 namespace Database\Seeders;
 
+use App\Models\Organization;
+use App\Models\OrganizationType;
 use App\Models\Person;
 use App\Models\SearchReport;
 use App\Models\User;
@@ -18,6 +20,8 @@ class DatabaseSeeder extends Seeder
         $this->call([
             MunicipalitySeeder::class,
             RolePermissionSeeder::class,
+            OrganizationTypeSeeder::class,
+            FacilityTypeSeeder::class,
             NeedsSeeder::class,
         ]);
 
@@ -29,6 +33,25 @@ class DatabaseSeeder extends Seeder
             ]
         );
         $admin->assignRole(Role::findByName('admin', 'api'));
+
+        $orgType = OrganizationType::query()->where('code', 'fundacion')->firstOrFail();
+        $organization = Organization::query()->firstOrCreate(
+            ['name' => 'Fundación Esperanza'],
+            [
+                'organization_type_id' => $orgType->id,
+                'description' => 'Organización de apoyo a personas afectadas por emergencias.',
+            ]
+        );
+
+        $orgAdmin = User::query()->firstOrCreate(
+            ['email' => 'org.admin@fundacion.test'],
+            [
+                'name' => 'Admin Fundación Esperanza',
+                'password' => bcrypt('password'),
+                'organization_id' => $organization->id,
+            ]
+        );
+        $orgAdmin->assignRole(Role::findByName('org_admin', 'api'));
 
         if (Person::count() === 0) {
             Person::factory()->count(40)->create();

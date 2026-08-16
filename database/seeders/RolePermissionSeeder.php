@@ -26,6 +26,18 @@ class RolePermissionSeeder extends Seeder
             'stats.view',
             'users.manage',
             'needs.manage',
+            'organizations.manage',
+            'facilities.manage',
+        ],
+        'org_admin' => [
+            'people.view',
+            'people.update',
+            'people.verify',
+            'search-reports.view',
+            'search-reports.manage',
+            'stats.view',
+            'users.manage',
+            'facilities.manage',
         ],
         'operator' => [
             'people.view',

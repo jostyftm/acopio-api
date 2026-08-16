@@ -20,7 +20,7 @@ class MeController extends Controller
     public function __invoke(Request $request): JsonResponse
     {
         $user = $request->user();
-        $user->load('roles');
+        $user->load('roles')->load('organization');
 
         return ApiResponse::success(UserResource::make($user));
     }

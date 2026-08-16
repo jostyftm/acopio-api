@@ -35,12 +35,16 @@ class UserController extends Controller
     {
         $this->authorize('viewAny', User::class);
 
-        $users = UserResource::collection(
-            QueryBuilder::for(User::class)
-                ->allowedFilters('email')
-                ->defaultSort('-created_at')
-                ->cursorPaginate($request->integer('per_page', 15)),
-        );
+        $query = QueryBuilder::for(User::class)
+            ->with('organization')
+            ->allowedFilters('email')
+            ->defaultSort('-created_at');
+
+        if (! $request->user()->hasRole('admin', 'api')) {
+            $query->where('organization_id', $request->user()->organization_id);
+        }
+
+        $users = UserResource::collection($query->cursorPaginate($request->integer('per_page', 15)));
 
         return ApiResponse::success($users);
     }
@@ -56,7 +60,7 @@ class UserController extends Controller
     {
         $user = $this->userService->create($request->validated());
 
-        return ApiResponse::success(UserResource::make($user), null, 201);
+        return ApiResponse::success(UserResource::make($user->load('organization')), null, 201);
     }
 
     /**
@@ -72,7 +76,7 @@ class UserController extends Controller
     {
         $this->authorize('view', $user);
 
-        return ApiResponse::success(UserResource::make($user));
+        return ApiResponse::success(UserResource::make($user->load('organization')));
     }
 
     /**
@@ -87,7 +91,7 @@ class UserController extends Controller
     {
         $user = $this->userService->update($user, $request->validated());
 
-        return ApiResponse::success(UserResource::make($user));
+        return ApiResponse::success(UserResource::make($user->load('organization')));
     }
 
     /**

@@ -12,7 +12,18 @@ class StoreUserRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return $this->user()?->can('users.manage') ?? false;
+        $user = $this->user();
+
+        if ($user === null || ! $user->can('users.manage')) {
+            return false;
+        }
+
+        if ($user->hasRole('admin', 'api')) {
+            return true;
+        }
+
+        return $this->input('organization_id') !== null
+            && (int) $this->input('organization_id') === (int) $user->organization_id;
     }
 
     /**
@@ -22,6 +33,10 @@ class StoreUserRequest extends FormRequest
      */
     public function rules(): array
     {
+        $allowedRoles = $this->user()?->hasRole('admin', 'api') === true
+            ? ['admin', 'org_admin', 'operator', 'viewer']
+            : ['operator', 'viewer'];
+
         return [
             /**
              * Full name of the user.
@@ -49,7 +64,14 @@ class StoreUserRequest extends FormRequest
              *
              * @example operator
              */
-            'role' => ['required', Rule::in(['admin', 'operator', 'viewer'])],
+            'role' => ['required', Rule::in($allowedRoles)],
+
+            /**
+             * Organization the user belongs to.
+             *
+             * @example 1
+             */
+            'organization_id' => ['nullable', 'integer', 'exists:organizations,id'],
         ];
     }
 }

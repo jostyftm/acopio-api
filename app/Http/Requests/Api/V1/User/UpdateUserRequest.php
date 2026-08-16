@@ -12,7 +12,21 @@ class UpdateUserRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return $this->user()?->can('users.manage') ?? false;
+        $user = $this->user();
+        $target = $this->route('user');
+
+        if ($user === null || ! $user->can('users.manage')) {
+            return false;
+        }
+
+        if ($user->hasRole('admin', 'api')) {
+            return true;
+        }
+
+        return $target !== null
+            && (int) $target->organization_id === (int) $user->organization_id
+            && ($this->input('organization_id') === null
+                || (int) $this->input('organization_id') === (int) $user->organization_id);
     }
 
     /**
@@ -22,6 +36,10 @@ class UpdateUserRequest extends FormRequest
      */
     public function rules(): array
     {
+        $allowedRoles = $this->user()?->hasRole('admin', 'api') === true
+            ? ['admin', 'org_admin', 'operator', 'viewer']
+            : ['operator', 'viewer'];
+
         return [
             /**
              * Full name of the user.
@@ -49,7 +67,21 @@ class UpdateUserRequest extends FormRequest
              *
              * @example operator
              */
-            'role' => ['sometimes', Rule::in(['admin', 'operator', 'viewer'])],
+            'role' => ['sometimes', Rule::in($allowedRoles)],
+
+            /**
+             * Organization the user belongs to.
+             *
+             * @example 1
+             */
+            'organization_id' => ['sometimes', 'nullable', 'integer', 'exists:organizations,id'],
+
+            /**
+             * Whether the account can log in.
+             *
+             * @example true
+             */
+            'is_active' => ['sometimes', 'boolean'],
         ];
     }
 }

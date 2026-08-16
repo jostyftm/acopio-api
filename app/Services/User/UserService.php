@@ -19,6 +19,7 @@ class UserService
             'name' => $data['name'],
             'email' => $data['email'],
             'password' => Hash::make($data['password']),
+            'organization_id' => $data['organization_id'] ?? null,
         ]);
 
         $user->syncRoles([$role]);
@@ -37,6 +38,12 @@ class UserService
             'password' => isset($data['password'])
                 ? Hash::make($data['password'])
                 : $user->password,
+            'organization_id' => array_key_exists('organization_id', $data)
+                ? $data['organization_id']
+                : $user->organization_id,
+            'is_active' => array_key_exists('is_active', $data)
+                ? $data['is_active']
+                : $user->is_active,
         ]);
 
         if (isset($data['role'])) {
