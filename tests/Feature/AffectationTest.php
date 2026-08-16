@@ -151,6 +151,73 @@ it('rejects updating an affectation without permission', function () {
     $this->putJson("/api/v1/affectations/{$affectation->id}", ['severity' => 'total'])->assertForbidden();
 });
 
+it('deletes an evidence from an affectation', function () {
+    $this->seed(RolePermissionSeeder::class);
+
+    $admin = makeUserWithRole('admin');
+    Passport::actingAs($admin);
+
+    Storage::fake('s3');
+
+    $affectation = Person::factory()->create()->affectation()->create(['severity' => 'partial']);
+    Storage::disk('s3')->put('evidence/affectations/1/danos.jpg', 'contenido');
+    $evidence = $affectation->evidence()->create([
+        'file_path' => 'evidence/affectations/1/danos.jpg',
+        'original_name' => 'danos.jpg',
+        'mime' => 'image/jpeg',
+        'size' => 9,
+    ]);
+
+    $this->deleteJson("/api/v1/affectations/{$affectation->id}/evidence/{$evidence->id}")
+        ->assertOk()
+        ->assertJsonPath('data.deleted', true);
+
+    Storage::disk('s3')->assertMissing('evidence/affectations/1/danos.jpg');
+    expect($affectation->evidence()->count())->toBe(0);
+});
+
+it('rejects deleting an evidence without permission', function () {
+    $this->seed(RolePermissionSeeder::class);
+
+    $viewer = User::factory()->create();
+    $viewer->assignRole(Role::findByName('viewer', 'api'));
+    Passport::actingAs($viewer);
+
+    $affectation = Person::factory()->create()->affectation()->create(['severity' => 'partial']);
+    $evidence = $affectation->evidence()->create([
+        'file_path' => 'evidence/affectations/1/danos.jpg',
+        'original_name' => 'danos.jpg',
+        'mime' => 'image/jpeg',
+        'size' => 9,
+    ]);
+
+    $this->deleteJson("/api/v1/affectations/{$affectation->id}/evidence/{$evidence->id}")->assertForbidden();
+});
+
+it('rejects deleting an evidence that belongs to another affectation', function () {
+    $this->seed(RolePermissionSeeder::class);
+
+    $admin = makeUserWithRole('admin');
+    Passport::actingAs($admin);
+
+    $first = Person::factory()->create()->affectation()->create(['severity' => 'partial']);
+    $second = Person::factory()->create()->affectation()->create(['severity' => 'total']);
+    $evidence = $first->evidence()->create([
+        'file_path' => 'evidence/affectations/1/danos.jpg',
+        'original_name' => 'danos.jpg',
+        'mime' => 'image/jpeg',
+        'size' => 9,
+    ]);
+
+    $this->deleteJson("/api/v1/affectations/{$second->id}/evidence/{$evidence->id}")->assertNotFound();
+});
+
+it('rejects deleting an evidence when unauthenticated', function () {
+    $affectation = Person::factory()->create()->affectation()->create(['severity' => 'partial']);
+
+    $this->deleteJson("/api/v1/affectations/{$affectation->id}/evidence/1")->assertStatus(401);
+});
+
 it('lists affectations with the person relationship', function () {
     $this->seed(RolePermissionSeeder::class);
 

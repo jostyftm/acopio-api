@@ -6,10 +6,12 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\Affectation\UpdateAffectationRequest;
 use App\Http\Resources\Api\V1\Affectation\AffectationResource;
 use App\Models\Affectation;
+use App\Models\AffectationEvidence;
 use App\Support\ApiResponse;
 use Clickbar\Magellan\Data\Geometries\Point;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class AffectationController extends Controller
 {
@@ -92,5 +94,26 @@ class AffectationController extends Controller
         $affectation->load(['person.municipality', 'needs', 'evidence']);
 
         return ApiResponse::success(AffectationResource::make($affectation));
+    }
+
+    /**
+     * Elimina una evidencia subida a la afectación.
+     *
+     * Quita el archivo del almacenamiento y registra el borrado. Requiere
+     * permiso de actualización del módulo de afectaciones.
+     */
+    public function destroyEvidence(Request $request, Affectation $affectation, AffectationEvidence $evidence): JsonResponse
+    {
+        $this->authorize('update', $affectation);
+
+        abort_if(
+            $evidence->affectation_id !== $affectation->id,
+            JsonResponse::HTTP_NOT_FOUND,
+        );
+
+        Storage::disk('s3')->delete($evidence->file_path);
+        $evidence->delete();
+
+        return ApiResponse::success(['deleted' => true]);
     }
 }

@@ -87,6 +87,8 @@ Route::name('api.v1.')->group(function (): void {
             ->name('affectations.show');
         Route::put('affectations/{affectation}', [AffectationController::class, 'update'])
             ->name('affectations.update');
+        Route::delete('affectations/{affectation}/evidence/{evidence}', [AffectationController::class, 'destroyEvidence'])
+            ->name('affectations.evidence.destroy');
 
         Route::apiResource('search-reports', SearchReportController::class)->except(['store', 'destroy']);
         Route::apiResource('users', UserController::class);
