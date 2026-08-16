@@ -25,3 +25,5 @@ boost.json
 Homestead.json
 Homestead.yaml
 Thumbs.db
+
+.env.testing

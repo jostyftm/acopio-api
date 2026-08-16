@@ -74,6 +74,34 @@ class StoreModuleRequest extends FormRequest
              * Whether the module is enabled.
              */
             'is_active' => ['boolean'],
+
+            /**
+             * Whether to create the individual CRUD permissions for the module.
+             */
+            'create_crud' => ['sometimes', 'boolean'],
+
+            /**
+             * Permissions to create when `create_crud` is enabled.
+             */
+            'permissions' => Rule::when(
+                $this->boolean('create_crud'),
+                ['required', 'array'],
+                ['nullable', 'array'],
+            ),
+
+            /**
+             * Permission action that composes the name as {module}.{action}.
+             *
+             * @example view
+             */
+            'permissions.*.action' => ['required_with:permissions', 'string', 'max:80', 'regex:/^[a-z][a-z0-9-]*$/'],
+
+            /**
+             * Human readable label shown in the frontend.
+             *
+             * @example Ver
+             */
+            'permissions.*.display_name' => ['nullable', 'string', 'max:255'],
         ];
     }
 }

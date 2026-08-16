@@ -32,6 +32,23 @@ it('creates a permission composing the name from the module and action', functio
         ->assertJsonPath('data.attributes.module_id', $module->id);
 });
 
+it('stores the display name and falls back to the name when absent', function () {
+    Passport::actingAs(makeUserWithRole('admin'));
+
+    $module = Module::query()->where('key', 'people')->firstOrFail();
+
+    $this->postJson('/api/v1/permissions', [
+        'module_id' => $module->id,
+        'action' => 'export',
+        'display_name' => 'Exportar',
+    ])->assertCreated()
+        ->assertJsonPath('data.attributes.display_name', 'Exportar');
+
+    $response = $this->getJson('/api/v1/permissions')->assertOk();
+
+    $response->assertJsonPath('data.0.attributes.display_name', $response->json('data.0.attributes.name'));
+});
+
 it('rejects a duplicated composed permission name', function () {
     Passport::actingAs(makeUserWithRole('admin'));
 
@@ -59,6 +76,13 @@ it('updates a permission and recomposes its name', function () {
     ])->assertOk()
         ->assertJsonPath('data.attributes.name', 'people.import')
         ->assertJsonPath('data.attributes.action', 'import');
+
+    $this->putJson("/api/v1/permissions/{$permission->id}", [
+        'module_id' => $module->id,
+        'action' => 'import',
+        'display_name' => 'Importar',
+    ])->assertOk()
+        ->assertJsonPath('data.attributes.display_name', 'Importar');
 });
 
 it('deletes a permission', function () {

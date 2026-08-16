@@ -25,6 +25,7 @@ class PermissionResource extends JsonResource
                     'name' => $this->module->name,
                 ]),
                 'name' => $this->name,
+                'display_name' => $this->display_name ?? $this->name,
                 'action' => $this->action(),
                 'guard_name' => $this->guard_name,
                 'created_at' => $this->created_at,

@@ -18,6 +18,7 @@ class PermissionService
             'name' => $this->composeName($data['module_id'], $data['action']),
             'guard_name' => self::GUARD,
             'module_id' => $data['module_id'],
+            'display_name' => $data['display_name'] ?? null,
         ]);
     }
 
@@ -29,6 +30,7 @@ class PermissionService
         $permission->update([
             'name' => $this->composeName($data['module_id'], $data['action']),
             'module_id' => $data['module_id'],
+            'display_name' => $data['display_name'] ?? $permission->display_name,
         ]);
 
         return $permission->fresh('module');

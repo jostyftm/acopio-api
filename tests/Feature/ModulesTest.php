@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Module;
+use App\Models\Permission;
 use Database\Seeders\RolePermissionSeeder;
 use Laravel\Passport\Passport;
 
@@ -58,6 +59,53 @@ it('deletes a module', function () {
     $this->deleteJson("/api/v1/modules/{$module->id}")->assertNoContent();
 
     expect(Module::find($module->id))->toBeNull();
+});
+
+it('creates a module with the individual CRUD permissions', function () {
+    Passport::actingAs(makeUserWithRole('admin'));
+
+    $this->postJson('/api/v1/modules', [
+        'key' => 'reports',
+        'name' => 'Reportes',
+        'path' => '/reports',
+        'icon' => 'FileText',
+        'order' => 8,
+        'create_crud' => true,
+        'permissions' => [
+            ['action' => 'view', 'display_name' => 'Ver'],
+            ['action' => 'list', 'display_name' => 'Listar'],
+            ['action' => 'update'],
+            ['action' => 'delete', 'display_name' => 'Eliminar'],
+            ['action' => 'create'],
+        ],
+    ])->assertCreated()
+        ->assertJsonPath('data.attributes.key', 'reports');
+
+    expect(Permission::query()->where('name', 'like', 'reports.%')->count())->toBe(5)
+        ->and(Permission::query()->where('name', 'reports.view')->value('display_name'))->toBe('Ver')
+        ->and(Permission::query()->where('name', 'reports.list')->value('display_name'))->toBe('Listar')
+        ->and(Permission::query()->where('name', 'reports.update')->value('display_name'))->toBeNull();
+});
+
+it('does not create permissions when create_crud is disabled', function () {
+    Passport::actingAs(makeUserWithRole('admin'));
+
+    $this->postJson('/api/v1/modules', [
+        'key' => 'reports',
+        'name' => 'Reportes',
+    ])->assertCreated();
+
+    expect(Permission::query()->where('name', 'like', 'reports.%')->count())->toBe(0);
+});
+
+it('requires the permissions list when create_crud is enabled', function () {
+    Passport::actingAs(makeUserWithRole('admin'));
+
+    $this->postJson('/api/v1/modules', [
+        'key' => 'reports',
+        'name' => 'Reportes',
+        'create_crud' => true,
+    ])->assertUnprocessable()->assertJsonValidationErrors('permissions');
 });
 
 it('validates module creation', function () {

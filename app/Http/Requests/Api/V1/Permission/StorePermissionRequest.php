@@ -37,6 +37,13 @@ class StorePermissionRequest extends FormRequest
              * @example export
              */
             'action' => ['required', 'string', 'max:80', 'regex:/^[a-z][a-z0-9-]*$/'],
+
+            /**
+             * Human readable label shown in the frontend.
+             *
+             * @example Exportar
+             */
+            'display_name' => ['nullable', 'string', 'max:255'],
         ];
     }
 

@@ -3,6 +3,7 @@
 namespace App\Services\Module;
 
 use App\Models\Module;
+use App\Models\Permission;
 use App\Models\User;
 
 class ModuleService
@@ -12,7 +13,33 @@ class ModuleService
      */
     public function create(array $data): Module
     {
-        return Module::query()->create($data);
+        $module = Module::query()->create($data);
+
+        $this->createCrudPermissions($module, $data);
+
+        return $module;
+    }
+
+    /**
+     * Creates the individual CRUD permissions for a module when requested.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function createCrudPermissions(Module $module, array $data): void
+    {
+        $permissions = $data['permissions'] ?? [];
+        $createCrud = $data['create_crud'] ?? false;
+
+        if ($createCrud !== true || $permissions === []) {
+            return;
+        }
+
+        foreach ($permissions as $permission) {
+            Permission::query()->firstOrCreate(
+                ['name' => "{$module->key}.{$permission['action']}", 'guard_name' => 'api'],
+                ['module_id' => $module->id, 'display_name' => $permission['display_name'] ?? null],
+            );
+        }
     }
 
     /**
