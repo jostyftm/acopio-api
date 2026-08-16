@@ -66,7 +66,7 @@ class UpdateAffectationRequest extends FormRequest
              *
              * @example
              */
-            'evidence' => ['nullable', 'array', 'max:5'],
+            'evidence' => ['nullable', 'array', 'max:'.config('evidence.max_files')],
             'evidence.*' => ['file', 'mimetypes:image/jpeg,image/png,image/webp,image/gif,video/mp4,video/quicktime,video/webm', new EvidenceFile],
         ];
     }

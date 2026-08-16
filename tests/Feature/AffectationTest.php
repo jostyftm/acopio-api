@@ -282,6 +282,18 @@ it('rejects unauthenticated access to affectations', function () {
     $this->getJson('/api/v1/affectations')->assertStatus(401);
 });
 
+it('rejects evidence images that exceed the configured size limit', function () {
+    config(['evidence.max_image_bytes' => 2 * 1024 * 1024]);
+
+    $this->post('/api/v1/registrations', [
+        ...baseRegistrationPayload(),
+        'severity' => 'partial',
+        'evidence' => [UploadedFile::fake()->image('grande.jpg', 50, 50)->size(3072)],
+    ])->assertUnprocessable()
+        ->assertJsonValidationErrors('evidence.0')
+        ->assertJsonFragment(['La foto no puede superar los 2MB.']);
+});
+
 /**
  * @return array<string, mixed>
  */

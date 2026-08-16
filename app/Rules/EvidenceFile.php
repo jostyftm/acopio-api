@@ -8,10 +8,6 @@ use Illuminate\Http\UploadedFile;
 
 class EvidenceFile implements ValidationRule
 {
-    private const IMAGE_MAX_BYTES = 10 * 1024 * 1024;
-
-    private const VIDEO_MAX_BYTES = 100 * 1024 * 1024;
-
     /**
      * Run the validation rule.
      *
@@ -29,16 +25,18 @@ class EvidenceFile implements ValidationRule
         $size = $value->getSize();
 
         if (str_starts_with($mime, 'image/')) {
-            if ($size > self::IMAGE_MAX_BYTES) {
-                $fail('La foto no puede superar los 10MB.');
+            $maxBytes = (int) config('evidence.max_image_bytes');
+            if ($size > $maxBytes) {
+                $fail('La foto no puede superar los '.intdiv($maxBytes, 1024 * 1024).'MB.');
             }
 
             return;
         }
 
         if (str_starts_with($mime, 'video/')) {
-            if ($size > self::VIDEO_MAX_BYTES) {
-                $fail('El video no puede superar los 100MB.');
+            $maxBytes = (int) config('evidence.max_video_bytes');
+            if ($size > $maxBytes) {
+                $fail('El video no puede superar los '.intdiv($maxBytes, 1024 * 1024).'MB.');
             }
 
             return;
