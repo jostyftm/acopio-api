@@ -88,7 +88,7 @@ class RolePermissionSeeder extends Seeder
     private const MODULES = [
         'dashboard' => [
             'name' => 'Panel',
-            'path' => '/dashboard2',
+            'path' => '/dashboard',
             'icon' => 'LayoutDashboard',
             'order' => 1,
             'parent' => null,
