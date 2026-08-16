@@ -1,5 +1,9 @@
 <?php
 
+use App\Models\Affectation;
+use App\Models\AffectationSeverity;
+use App\Models\IncidentType;
+use App\Models\Person;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\PermissionRegistrar;
 use Tests\TestCase;
@@ -52,4 +56,53 @@ expect()->extend('toBeOne', function () {
 function something()
 {
     // ..
+}
+
+/**
+ * Crea (idempotente) el tipo de incidente "derrumbes" con sus gravedades
+ * y devuelve sus identificadores para usarlos en los tests.
+ *
+ * @return array{incident_type_id: int, partial_severity_id: int, total_severity_id: int}
+ */
+function derrumbesSeverities(): array
+{
+    $type = IncidentType::query()->firstOrCreate(
+        ['code' => 'derrumbes'],
+        ['display_name' => 'Derrumbes', 'severity_mode' => 'single'],
+    );
+
+    $partial = AffectationSeverity::query()->firstOrCreate(
+        ['incident_type_id' => $type->id, 'code' => 'partial'],
+        ['display_name' => 'Afectación parcial', 'order' => 1],
+    );
+
+    $total = AffectationSeverity::query()->firstOrCreate(
+        ['incident_type_id' => $type->id, 'code' => 'total'],
+        ['display_name' => 'Afectación total', 'order' => 2],
+    );
+
+    return [
+        'incident_type_id' => $type->id,
+        'partial_severity_id' => $partial->id,
+        'total_severity_id' => $total->id,
+    ];
+}
+
+/**
+ * Crea una afectación con una persona nueva, tipo de incidente "derrumbes"
+ * y gravedad parcial, devolviéndola lista para aserciones.
+ *
+ * @param  array<string, mixed>  $attributes
+ */
+function makeAffectation(array $attributes = []): Affectation
+{
+    $severities = derrumbesSeverities();
+
+    $affectation = Person::factory()->create()->affectation()->create([
+        'incident_type_id' => $severities['incident_type_id'],
+        ...$attributes,
+    ]);
+    $affectation->severities()->attach($severities['partial_severity_id']);
+
+    return $affectation;
 }

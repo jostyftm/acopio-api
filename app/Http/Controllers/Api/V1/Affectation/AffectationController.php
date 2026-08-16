@@ -40,7 +40,7 @@ class AffectationController extends Controller
             markLocated: true,
             reporter: $request->user(),
         );
-        $person->load(['municipality', 'affectation.needs', 'affectation.attachments', 'affectation.familyMembers.person.attachments']);
+        $person->load(['municipality', 'affectation.needs', 'affectation.incidentType', 'affectation.severities', 'affectation.propertyTypes', 'affectation.attachments', 'affectation.familyMembers.person.attachments']);
 
         return ApiResponse::success(
             PersonResource::make($person),
@@ -59,7 +59,7 @@ class AffectationController extends Controller
         $this->authorize('viewAny', Affectation::class);
 
         $query = Affectation::query()
-            ->with(['person.municipality', 'needs', 'reporter', 'organization'])
+            ->with(['person.municipality', 'needs', 'incidentType', 'severities', 'propertyTypes', 'reporter', 'organization'])
             ->latest('id');
 
         if (! $request->user()->hasRole('admin', 'api')) {
@@ -86,7 +86,7 @@ class AffectationController extends Controller
     {
         $this->authorize('view', $affectation);
 
-        $affectation->load(['person.municipality', 'needs', 'attachments', 'reporter', 'organization', 'familyMembers.person.attachments']);
+        $affectation->load(['person.municipality', 'needs', 'incidentType', 'severities', 'propertyTypes', 'attachments', 'reporter', 'organization', 'familyMembers.person.attachments']);
 
         return ApiResponse::success(AffectationResource::make($affectation));
     }
@@ -104,9 +104,12 @@ class AffectationController extends Controller
         $this->authorize('update', $affectation);
 
         $data = [
-            'severity' => $request->input('severity'),
             'description' => $request->input('description'),
         ];
+
+        if ($request->has('incident_type_id')) {
+            $data['incident_type_id'] = $request->input('incident_type_id');
+        }
 
         if ($request->has('latitude') || $request->has('longitude')) {
             $latitude = $request->filled('latitude') ? (float) $request->input('latitude') : null;
@@ -118,6 +121,14 @@ class AffectationController extends Controller
         }
 
         $affectation->update($data);
+
+        if ($request->has('severities')) {
+            $affectation->severities()->sync($request->input('severities', []));
+        }
+
+        if ($request->has('property_types')) {
+            $affectation->propertyTypes()->sync($request->input('property_types', []));
+        }
 
         if ($request->filled('needs')) {
             $affectation->needs()->sync($request->input('needs'));
@@ -134,7 +145,7 @@ class AffectationController extends Controller
             ]);
         }
 
-        $affectation->load(['person.municipality', 'needs', 'attachments', 'reporter', 'organization', 'familyMembers.person.attachments']);
+        $affectation->load(['person.municipality', 'needs', 'incidentType', 'severities', 'propertyTypes', 'attachments', 'reporter', 'organization', 'familyMembers.person.attachments']);
 
         return ApiResponse::success(AffectationResource::make($affectation));
     }

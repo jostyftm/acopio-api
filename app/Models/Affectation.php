@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use App\Enums\AffectationSeverity;
 use Clickbar\Magellan\Data\Geometries\Point;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -14,9 +13,9 @@ class Affectation extends Model
 {
     protected $fillable = [
         'person_id',
+        'incident_type_id',
         'reported_by',
         'organization_id',
-        'severity',
         'description',
         'location',
     ];
@@ -24,7 +23,6 @@ class Affectation extends Model
     protected function casts(): array
     {
         return [
-            'severity' => AffectationSeverity::class,
             'location' => Point::class,
         ];
     }
@@ -32,6 +30,21 @@ class Affectation extends Model
     public function person(): BelongsTo
     {
         return $this->belongsTo(Person::class);
+    }
+
+    public function incidentType(): BelongsTo
+    {
+        return $this->belongsTo(IncidentType::class);
+    }
+
+    public function severities(): BelongsToMany
+    {
+        return $this->belongsToMany(AffectationSeverity::class, 'affectation_severity')->withTimestamps();
+    }
+
+    public function propertyTypes(): BelongsToMany
+    {
+        return $this->belongsToMany(PropertyType::class)->withTimestamps();
     }
 
     public function reporter(): BelongsTo

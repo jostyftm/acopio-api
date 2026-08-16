@@ -47,7 +47,7 @@ class RegistrationService
             ] : []),
         ]);
 
-        if ($person->wasRecentlyCreated && isset($data['severity'])) {
+        if ($person->wasRecentlyCreated && isset($data['incident_type_id'])) {
             $this->createAffectation($person, $data, $reporter);
         }
 
@@ -97,13 +97,21 @@ class RegistrationService
         $affectation = $person->affectation()->create([
             'reported_by' => $reporter?->id,
             'organization_id' => $reporter?->organization_id,
-            'severity' => $data['severity'],
+            'incident_type_id' => $data['incident_type_id'],
             'description' => $data['description'] ?? null,
             'location' => $this->pointFrom($incidentLatitude, $incidentLongitude),
         ]);
 
         if (! empty($data['needs'])) {
             $affectation->needs()->attach($data['needs']);
+        }
+
+        if (! empty($data['severities'])) {
+            $affectation->severities()->attach($data['severities']);
+        }
+
+        if (! empty($data['property_types'])) {
+            $affectation->propertyTypes()->attach($data['property_types']);
         }
 
         foreach ($data['evidence'] ?? [] as $file) {

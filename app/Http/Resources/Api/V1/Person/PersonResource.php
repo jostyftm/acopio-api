@@ -69,7 +69,18 @@ class PersonResource extends JsonResource
                 ? null
                 : [
                     'id' => $this->affectation->id,
-                    'severity' => $this->affectation->severity?->value,
+                    'incident_type' => $this->affectation->incidentType === null ? null : [
+                        'id' => $this->affectation->incidentType->id,
+                        'code' => $this->affectation->incidentType->code,
+                        'display_name' => $this->affectation->incidentType->display_name,
+                    ],
+                    'severities' => $this->affectation->severities->map(
+                        fn ($severity): array => [
+                            'id' => $severity->id,
+                            'code' => $severity->code,
+                            'display_name' => $severity->display_name,
+                        ],
+                    )->values(),
                     'description' => $this->affectation->description,
                     'latitude' => $this->affectation->latitude,
                     'longitude' => $this->affectation->longitude,

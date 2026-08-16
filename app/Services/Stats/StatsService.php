@@ -2,7 +2,6 @@
 
 namespace App\Services\Stats;
 
-use App\Enums\AffectationSeverity;
 use App\Enums\PersonStatus;
 use App\Models\Affectation;
 use App\Models\Need;
@@ -23,10 +22,11 @@ class StatsService
             ->groupBy('status')
             ->pluck('total', 'status');
 
-        $byAffectationSeverity = Affectation::query()
-            ->select('severity', DB::raw('count(*) as total'))
-            ->groupBy('severity')
-            ->pluck('total', 'severity');
+        $byAffectationSeverity = DB::table('affectation_severity')
+            ->join('affectation_severities', 'affectation_severities.id', '=', 'affectation_severity.affectation_severity_id')
+            ->select('affectation_severities.code', DB::raw('count(*) as total'))
+            ->groupBy('affectation_severities.code')
+            ->pluck('total', 'code');
 
         $needsByImpactLevel = DB::table('affectation_need')
             ->join('needs', 'needs.id', '=', 'affectation_need.need_id')
@@ -55,9 +55,35 @@ class StatsService
             'people_with_location' => (int) Person::query()->withLocation()->count(),
             'total_affected_people' => (int) Affectation::query()->count(),
             'by_affectation_severity' => [
-                'partial' => (int) ($byAffectationSeverity[AffectationSeverity::Partial->value] ?? 0),
-                'total' => (int) ($byAffectationSeverity[AffectationSeverity::Total->value] ?? 0),
+                'partial' => (int) ($byAffectationSeverity['partial'] ?? 0),
+                'total' => (int) ($byAffectationSeverity['total'] ?? 0),
             ],
+            'by_property_type' => DB::table('affectation_property_type')
+                ->join('property_types', 'property_types.id', '=', 'affectation_property_type.property_type_id')
+                ->select('property_types.id', 'property_types.display_name', DB::raw('count(*) as total'))
+                ->groupBy('property_types.id', 'property_types.display_name')
+                ->orderByDesc('total')
+                ->limit(10)
+                ->get()
+                ->map(fn ($row): array => [
+                    'id' => (int) $row->id,
+                    'display_name' => $row->display_name,
+                    'total' => (int) $row->total,
+                ])
+                ->values(),
+            'by_incident_type' => DB::table('affectations')
+                ->join('incident_types', 'incident_types.id', '=', 'affectations.incident_type_id')
+                ->select('incident_types.id', 'incident_types.display_name', DB::raw('count(*) as total'))
+                ->groupBy('incident_types.id', 'incident_types.display_name')
+                ->orderByDesc('total')
+                ->limit(10)
+                ->get()
+                ->map(fn ($row): array => [
+                    'id' => (int) $row->id,
+                    'display_name' => $row->display_name,
+                    'total' => (int) $row->total,
+                ])
+                ->values(),
             'needs_by_impact_level' => [
                 'high' => (int) ($needsByImpactLevel['high'] ?? 0),
                 'medium' => (int) ($needsByImpactLevel['medium'] ?? 0),

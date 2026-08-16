@@ -15,7 +15,7 @@ class PersonService
     public function index(): QueryBuilder
     {
         return QueryBuilder::for(Person::class)
-            ->with(['municipality', 'affectation.needs', 'affectation.evidence'])
+            ->with(['municipality', 'affectation.needs', 'affectation.severities'])
             ->allowedFilters(
                 ...[
                     AllowedFilter::exact('status'),
@@ -55,7 +55,7 @@ class PersonService
     public function publicSearch(array $filters): QueryBuilder
     {
         $query = QueryBuilder::for(Person::class)
-            ->with(['municipality', 'affectation.needs'])
+            ->with(['municipality', 'affectation.needs', 'affectation.severities'])
             ->allowedFilters(
                 ...[
                     AllowedFilter::exact('status'),

@@ -2,10 +2,11 @@
 
 namespace App\Http\Requests\Api\V1\Registration;
 
-use App\Enums\AffectationSeverity;
 use App\Enums\DocumentType;
 use App\Enums\Sector;
+use App\Enums\SeverityMode;
 use App\Enums\SpecialNeed;
+use App\Models\IncidentType;
 use App\Rules\EvidenceFile;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -120,11 +121,39 @@ class StoreRegistrationRequest extends FormRequest
             'longitude' => ['nullable', 'numeric', 'between:-180,180'],
 
             /**
-             * Severity of the damage to the affectation.
+             * Incident type of the affectation.
              *
-             * @example partial
+             * @example 1
              */
-            'severity' => ['required', Rule::in(AffectationSeverity::values())],
+            'incident_type_id' => ['required', 'integer', Rule::exists('incident_types', 'id')],
+
+            /**
+             * Severities of the affectation, tied to the incident type.
+             *
+             * @example [1]
+             */
+            'severities' => [
+                'required',
+                'array',
+                'min:1',
+                'max:10',
+                function (string $attribute, mixed $value, callable $fail): void {
+                    $type = IncidentType::query()->find($this->integer('incident_type_id'));
+
+                    if ($type !== null && $type->severity_mode === SeverityMode::Single && count($value) > 1) {
+                        $fail('El tipo de incidente solo permite una gravedad.');
+                    }
+                },
+            ],
+            'severities.*' => ['integer', Rule::exists('affectation_severities', 'id')->where('incident_type_id', $this->integer('incident_type_id'))],
+
+            /**
+             * Property types affected by the incident (vivienda, negocio, etc.).
+             *
+             * @example [1,3]
+             */
+            'property_types' => ['nullable', 'array', 'max:10'],
+            'property_types.*' => ['integer', Rule::exists('property_types', 'id')],
 
             /**
              * Description of the damage.

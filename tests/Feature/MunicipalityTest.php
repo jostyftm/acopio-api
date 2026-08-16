@@ -54,6 +54,8 @@ it('returns null for coordinates without a covering municipality', function () {
 });
 
 it('assigns the municipality when registering a person', function () {
+    $severities = derrumbesSeverities();
+
     $this->postJson('/api/v1/registrations', [
         'document_type' => 'CC',
         'document_number' => '987654321',
@@ -66,7 +68,8 @@ it('assigns the municipality when registering a person', function () {
         'latitude' => 3.45,
         'longitude' => -76.5,
         'sector' => 'urban',
-        'severity' => 'partial',
+        'incident_type_id' => $severities['incident_type_id'],
+        'severities' => [$severities['partial_severity_id']],
         'data_consent' => true,
     ])->assertCreated()
         ->assertJsonPath('data.attributes.municipality', 'Cali');
@@ -79,6 +82,8 @@ it('assigns the municipality when registering a person', function () {
 });
 
 it('leaves municipality unassigned when coordinates and name do not resolve', function () {
+    $severities = derrumbesSeverities();
+
     $this->postJson('/api/v1/registrations', [
         'document_type' => 'CC',
         'document_number' => '111222333',
@@ -90,7 +95,8 @@ it('leaves municipality unassigned when coordinates and name do not resolve', fu
         'latitude' => 4.7,
         'longitude' => -74.1,
         'sector' => 'urban',
-        'severity' => 'total',
+        'incident_type_id' => $severities['incident_type_id'],
+        'severities' => [$severities['total_severity_id']],
         'data_consent' => true,
     ])->assertCreated()
         ->assertJsonPath('data.attributes.municipality', null);
@@ -99,6 +105,8 @@ it('leaves municipality unassigned when coordinates and name do not resolve', fu
 });
 
 it('resolves the municipality_id from the declared name when coordinates do not resolve', function () {
+    $severities = derrumbesSeverities();
+
     $cali = Municipality::where('code', '76001')->firstOrFail();
 
     $this->postJson('/api/v1/registrations', [
@@ -112,7 +120,8 @@ it('resolves the municipality_id from the declared name when coordinates do not 
         'latitude' => 4.7,
         'longitude' => -74.1,
         'sector' => 'rural',
-        'severity' => 'partial',
+        'incident_type_id' => $severities['incident_type_id'],
+        'severities' => [$severities['partial_severity_id']],
         'data_consent' => true,
     ])->assertCreated()
         ->assertJsonPath('data.attributes.municipality', 'Cali');

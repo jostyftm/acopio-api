@@ -28,7 +28,7 @@ class RegistrationController extends Controller
     public function store(StoreRegistrationRequest $request): JsonResponse
     {
         $person = $this->registrationService->register($request->validated());
-        $person->load(['municipality', 'affectation.needs', 'affectation.attachments', 'affectation.familyMembers.person.attachments']);
+        $person->load(['municipality', 'affectation.needs', 'affectation.severities', 'affectation.attachments', 'affectation.familyMembers.person.attachments']);
 
         return ApiResponse::success(
             PersonResource::make($person),
@@ -56,7 +56,7 @@ class RegistrationController extends Controller
             return ApiResponse::success(['exists' => false]);
         }
 
-        $person->load('affectation.needs');
+        $person->load('affectation.needs', 'affectation.severities');
 
         return ApiResponse::success([
             'exists' => true,
@@ -65,7 +65,9 @@ class RegistrationController extends Controller
                 'full_name' => $person->full_name,
             ],
             'affectation' => $person->affectation === null ? null : [
-                'severity' => $person->affectation->severity?->value,
+                'severities' => $person->affectation->severities->map(
+                    fn ($severity): string => $severity->code,
+                )->values(),
                 'needs' => $person->affectation->needs->pluck('name')->values(),
             ],
         ]);

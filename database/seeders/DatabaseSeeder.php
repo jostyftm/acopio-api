@@ -22,6 +22,8 @@ class DatabaseSeeder extends Seeder
             RolePermissionSeeder::class,
             OrganizationTypeSeeder::class,
             FacilityTypeSeeder::class,
+            PropertyTypeSeeder::class,
+            IncidentTypeSeeder::class,
             NeedsSeeder::class,
         ]);
 

@@ -1,6 +1,5 @@
 <?php
 
-use App\Enums\AffectationSeverity;
 use App\Models\Affectation;
 use App\Models\Municipality;
 use App\Models\Need;
@@ -34,7 +33,6 @@ it('creates an affectation with needs and evidence when registering a person', f
 
     $this->post('/api/v1/registrations', [
         ...baseRegistrationPayload(),
-        'severity' => 'partial',
         'description' => 'Techo destruido',
         'needs' => [$need->id],
         'evidence' => [UploadedFile::fake()->image('danos.jpg')],
@@ -43,7 +41,7 @@ it('creates an affectation with needs and evidence when registering a person', f
     $person = Person::where('document_number', '123456789')->firstOrFail();
     $affectation = $person->affectation()->firstOrFail();
 
-    expect($affectation->severity)->toBe(AffectationSeverity::Partial)
+    expect($affectation->severities->pluck('code'))->toContain('partial')
         ->and($affectation->description)->toBe('Techo destruido')
         ->and($affectation->needs->contains($need))->toBeTrue()
         ->and($affectation->attachments)->toHaveCount(1)
@@ -54,9 +52,11 @@ it('creates an affectation with needs and evidence when registering a person', f
 });
 
 it('stores the incident location on the affectation', function () {
+    $severities = derrumbesSeverities();
+
     $this->post('/api/v1/registrations', [
         ...baseRegistrationPayload(),
-        'severity' => 'total',
+        'severities' => [$severities['total_severity_id']],
         'incident_latitude' => 6.2,
         'incident_longitude' => -75.6,
     ])->assertCreated();
@@ -72,7 +72,6 @@ it('does not create an affectation for a duplicate document', function () {
 
     $this->post('/api/v1/registrations', [
         ...baseRegistrationPayload(),
-        'severity' => 'partial',
     ])->assertOk()->assertJsonPath('meta.duplicate', true);
 
     expect(Affectation::count())->toBe(0);
@@ -87,7 +86,6 @@ it('creates an affectation from the dashboard and marks the person as located', 
 
     $this->postJson('/api/v1/affectations', [
         ...baseRegistrationPayload(),
-        'severity' => 'partial',
         'description' => 'Techo destruido',
     ])->assertCreated()
         ->assertJsonPath('data.attributes.status', 'located')
@@ -109,14 +107,12 @@ it('rejects creating an affectation from the dashboard without permission', func
 
     $this->postJson('/api/v1/affectations', [
         ...baseRegistrationPayload(),
-        'severity' => 'partial',
     ])->assertForbidden();
 });
 
 it('rejects creating an affectation from the dashboard when unauthenticated', function () {
     $this->postJson('/api/v1/affectations', [
         ...baseRegistrationPayload(),
-        'severity' => 'partial',
     ])->assertStatus(401);
 });
 
@@ -127,7 +123,6 @@ it('resolves the municipality by code when coordinates do not resolve', function
         'municipality_code' => '76001',
         'latitude' => 4.7,
         'longitude' => -74.1,
-        'severity' => 'partial',
     ])->assertCreated()
         ->assertJsonPath('data.attributes.municipality', 'Cali');
 
@@ -138,6 +133,8 @@ it('resolves the municipality by code when coordinates do not resolve', function
 
 it('updates severity, needs and location via PUT', function () {
     $this->seed(RolePermissionSeeder::class);
+
+    $severities = derrumbesSeverities();
 
     $operator = User::factory()->create();
     $operator->assignRole(Role::findByName('operator', 'api'));
@@ -156,27 +153,28 @@ it('updates severity, needs and location via PUT', function () {
     ]);
     $person = Person::factory()->create();
     $affectation = $person->affectation()->create([
-        'severity' => 'partial',
         'reported_by' => $operator->id,
+        'incident_type_id' => $severities['incident_type_id'],
     ]);
+    $affectation->severities()->attach($severities['partial_severity_id']);
     $affectation->needs()->attach($need);
 
     Storage::fake('s3');
 
     $this->put("/api/v1/affectations/{$affectation->id}", [
-        'severity' => 'total',
+        'severities' => [$severities['total_severity_id']],
         'description' => 'Actualizado',
         'needs' => [$other->id],
         'latitude' => 6.2,
         'longitude' => -75.6,
         'evidence' => [UploadedFile::fake()->image('foto.jpg')],
     ])->assertOk()
-        ->assertJsonPath('data.attributes.severity', 'total');
+        ->assertJsonPath('data.attributes.severities.0.code', 'total');
 
     $affectation->refresh();
-    $affectation->load(['needs', 'attachments']);
+    $affectation->load(['needs', 'attachments', 'severities']);
 
-    expect($affectation->severity)->toBe(AffectationSeverity::Total)
+    expect($affectation->severities->pluck('code'))->toContain('total')
         ->and($affectation->description)->toBe('Actualizado')
         ->and($affectation->needs->pluck('id')->all())->toBe([$other->id])
         ->and($affectation->latitude)->toBe(6.2)
@@ -193,9 +191,12 @@ it('rejects updating an affectation without permission', function () {
     $viewer->assignRole(Role::findByName('viewer', 'api'));
     Passport::actingAs($viewer);
 
-    $affectation = Person::factory()->create()->affectation()->create(['severity' => 'partial']);
+    $affectation = makeAffectation();
 
-    $this->putJson("/api/v1/affectations/{$affectation->id}", ['severity' => 'total'])->assertForbidden();
+    $this->putJson(
+        "/api/v1/affectations/{$affectation->id}",
+        ['severities' => [derrumbesSeverities()['total_severity_id']]],
+    )->assertForbidden();
 });
 
 it('deletes an evidence from an affectation', function () {
@@ -206,7 +207,7 @@ it('deletes an evidence from an affectation', function () {
 
     Storage::fake('s3');
 
-    $affectation = Person::factory()->create()->affectation()->create(['severity' => 'partial']);
+    $affectation = makeAffectation();
     Storage::disk('s3')->put('evidence/affectations/1/danos.jpg', 'contenido');
     $evidence = $affectation->attachments()->create([
         'file_path' => 'evidence/affectations/1/danos.jpg',
@@ -230,7 +231,7 @@ it('rejects deleting an evidence without permission', function () {
     $viewer->assignRole(Role::findByName('viewer', 'api'));
     Passport::actingAs($viewer);
 
-    $affectation = Person::factory()->create()->affectation()->create(['severity' => 'partial']);
+    $affectation = makeAffectation();
     $evidence = $affectation->attachments()->create([
         'file_path' => 'evidence/affectations/1/danos.jpg',
         'original_name' => 'danos.jpg',
@@ -247,8 +248,8 @@ it('rejects deleting an evidence that belongs to another affectation', function 
     $admin = makeUserWithRole('admin');
     Passport::actingAs($admin);
 
-    $first = Person::factory()->create()->affectation()->create(['severity' => 'partial']);
-    $second = Person::factory()->create()->affectation()->create(['severity' => 'total']);
+    $first = makeAffectation();
+    $second = makeAffectation();
     $evidence = $first->attachments()->create([
         'file_path' => 'evidence/affectations/1/danos.jpg',
         'original_name' => 'danos.jpg',
@@ -260,7 +261,7 @@ it('rejects deleting an evidence that belongs to another affectation', function 
 });
 
 it('rejects deleting an evidence when unauthenticated', function () {
-    $affectation = Person::factory()->create()->affectation()->create(['severity' => 'partial']);
+    $affectation = makeAffectation();
 
     $this->deleteJson("/api/v1/affectations/{$affectation->id}/evidence/1")->assertStatus(401);
 });
@@ -273,20 +274,21 @@ it('lists affectations with the person relationship', function () {
 
     $this->post('/api/v1/registrations', [
         ...baseRegistrationPayload(),
-        'severity' => 'partial',
         'description' => 'Techo destruido',
     ])->assertCreated();
 
     $this->getJson('/api/v1/affectations')
         ->assertOk()
         ->assertJsonCount(1, 'data')
-        ->assertJsonPath('data.0.attributes.severity', 'partial')
+        ->assertJsonPath('data.0.attributes.severities.0.code', 'partial')
         ->assertJsonPath('data.0.attributes.description', 'Techo destruido')
         ->assertJsonPath('data.0.relationships.person.full_name', 'Maria Garcia');
 });
 
 it('shows a single affectation with its detail', function () {
     $this->seed(RolePermissionSeeder::class);
+
+    $severities = derrumbesSeverities();
 
     $admin = makeUserWithRole('admin');
     Passport::actingAs($admin);
@@ -300,7 +302,7 @@ it('shows a single affectation with its detail', function () {
 
     $this->post('/api/v1/registrations', [
         ...baseRegistrationPayload(),
-        'severity' => 'total',
+        'severities' => [$severities['total_severity_id']],
         'incident_latitude' => 6.2,
         'incident_longitude' => -75.6,
         'needs' => [$need->id],
@@ -310,7 +312,7 @@ it('shows a single affectation with its detail', function () {
 
     $this->getJson("/api/v1/affectations/{$affectation->id}")
         ->assertOk()
-        ->assertJsonPath('data.attributes.severity', 'total')
+        ->assertJsonPath('data.attributes.severities.0.code', 'total')
         ->assertJsonPath('data.attributes.latitude', 6.2)
         ->assertJsonPath('data.attributes.needs.0.id', $need->id)
         ->assertJsonPath('data.relationships.person.document_number', '123456789');
@@ -339,7 +341,6 @@ it('stores the reporting user and its organization on dashboard affectations', f
 
     $this->postJson('/api/v1/affectations', [
         ...baseRegistrationPayload(),
-        'severity' => 'partial',
     ])->assertCreated();
 
     $affectation = Affectation::query()->firstOrFail();
@@ -355,13 +356,11 @@ it('scopes the affectation listing to the organization and own reports for non-a
     $orgB = Organization::factory()->create();
 
     $reporterA = User::factory()->create(['organization_id' => $orgA->id]);
-    $affectationA = Person::factory()->create()->affectation()->create([
-        'severity' => 'partial',
+    $affectationA = makeAffectation([
         'reported_by' => $reporterA->id,
         'organization_id' => $orgA->id,
     ]);
-    Person::factory()->create()->affectation()->create([
-        'severity' => 'partial',
+    makeAffectation([
         'reported_by' => null,
         'organization_id' => $orgB->id,
     ]);
@@ -383,11 +382,8 @@ it('includes own reports for users without an organization', function () {
     $operator->assignRole(Role::findByName('operator', 'api'));
     Passport::actingAs($operator);
 
-    $mine = Person::factory()->create()->affectation()->create([
-        'severity' => 'partial',
-        'reported_by' => $operator->id,
-    ]);
-    Person::factory()->create()->affectation()->create(['severity' => 'partial']);
+    $mine = makeAffectation(['reported_by' => $operator->id]);
+    makeAffectation();
 
     $this->getJson('/api/v1/affectations')
         ->assertOk()
@@ -404,10 +400,7 @@ it('rejects viewing an affectation from another organization for non-admins', fu
     Passport::actingAs($orgAdmin);
 
     $other = Organization::factory()->create();
-    $affectation = Person::factory()->create()->affectation()->create([
-        'severity' => 'partial',
-        'organization_id' => $other->id,
-    ]);
+    $affectation = makeAffectation(['organization_id' => $other->id]);
 
     $this->getJson("/api/v1/affectations/{$affectation->id}")->assertForbidden();
 });
@@ -420,7 +413,7 @@ it('deletes an affectation and its evidence files', function () {
 
     Storage::fake('s3');
 
-    $affectation = Person::factory()->create()->affectation()->create(['severity' => 'partial']);
+    $affectation = makeAffectation();
     Storage::disk('s3')->put('evidence/affectations/1/danos.jpg', 'contenido');
     $affectation->attachments()->create([
         'file_path' => 'evidence/affectations/1/danos.jpg',
@@ -443,10 +436,7 @@ it('allows an organization admin to delete an affectation of its organization', 
     $orgAdmin->assignRole(Role::findByName('org_admin', 'api'));
     Passport::actingAs($orgAdmin);
 
-    $affectation = Person::factory()->create()->affectation()->create([
-        'severity' => 'partial',
-        'organization_id' => $organization->id,
-    ]);
+    $affectation = makeAffectation(['organization_id' => $organization->id]);
 
     $this->deleteJson("/api/v1/affectations/{$affectation->id}")->assertNoContent();
 });
@@ -460,10 +450,7 @@ it('rejects deleting an affectation from another organization', function () {
     Passport::actingAs($orgAdmin);
 
     $other = Organization::factory()->create();
-    $affectation = Person::factory()->create()->affectation()->create([
-        'severity' => 'partial',
-        'organization_id' => $other->id,
-    ]);
+    $affectation = makeAffectation(['organization_id' => $other->id]);
 
     $this->deleteJson("/api/v1/affectations/{$affectation->id}")->assertForbidden();
 });
@@ -475,7 +462,7 @@ it('rejects deleting an affectation without permission', function () {
     $viewer->assignRole(Role::findByName('viewer', 'api'));
     Passport::actingAs($viewer);
 
-    $affectation = Person::factory()->create()->affectation()->create(['severity' => 'partial']);
+    $affectation = makeAffectation();
 
     $this->deleteJson("/api/v1/affectations/{$affectation->id}")->assertForbidden();
 });
@@ -485,7 +472,6 @@ it('rejects evidence images that exceed the configured size limit', function () 
 
     $this->post('/api/v1/registrations', [
         ...baseRegistrationPayload(),
-        'severity' => 'partial',
         'evidence' => [UploadedFile::fake()->image('grande.jpg', 50, 50)->size(3072)],
     ])->assertUnprocessable()
         ->assertJsonValidationErrors('evidence.0')
@@ -497,7 +483,6 @@ it('registers the family group including the censused person as household head',
 
     $this->post('/api/v1/registrations', [
         ...baseRegistrationPayload(),
-        'severity' => 'partial',
         'family_members' => [
             [
                 'document_type' => 'CC',
@@ -554,7 +539,6 @@ it('reuses an existing person as a family member', function () {
 
     $this->post('/api/v1/registrations', [
         ...baseRegistrationPayload(),
-        'severity' => 'partial',
         'family_members' => [
             [
                 'document_type' => 'CC',
@@ -578,7 +562,6 @@ it('reuses an existing person as a family member', function () {
 it('rejects family members with missing required fields', function () {
     $this->postJson('/api/v1/registrations', [
         ...baseRegistrationPayload(),
-        'severity' => 'partial',
         'family_members' => [
             [
                 'document_type' => 'CC',
@@ -595,6 +578,8 @@ it('rejects family members with missing required fields', function () {
  */
 function baseRegistrationPayload(): array
 {
+    $severities = derrumbesSeverities();
+
     return [
         'document_type' => 'CC',
         'document_number' => '123456789',
@@ -604,6 +589,8 @@ function baseRegistrationPayload(): array
         'phone' => '3001234567',
         'municipality' => 'Cali',
         'sector' => 'urban',
+        'incident_type_id' => $severities['incident_type_id'],
+        'severities' => [$severities['partial_severity_id']],
         'data_consent' => true,
     ];
 }

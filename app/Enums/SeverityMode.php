@@ -2,10 +2,10 @@
 
 namespace App\Enums;
 
-enum AffectationSeverity: string
+enum SeverityMode: string
 {
-    case Partial = 'partial';
-    case Total = 'total';
+    case Single = 'single';
+    case Multiple = 'multiple';
 
     /**
      * @return array<int, string>

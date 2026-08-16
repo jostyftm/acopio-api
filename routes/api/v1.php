@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\V1\Affectation\AffectationController;
+use App\Http\Controllers\Api\V1\AffectationSeverity\AffectationSeverityController;
 use App\Http\Controllers\Api\V1\Auth\LoginController;
 use App\Http\Controllers\Api\V1\Auth\LogoutController;
 use App\Http\Controllers\Api\V1\Auth\MeController;
@@ -9,6 +10,7 @@ use App\Http\Controllers\Api\V1\Auth\SocialLoginController;
 use App\Http\Controllers\Api\V1\Department\DepartmentController;
 use App\Http\Controllers\Api\V1\Facility\FacilityController;
 use App\Http\Controllers\Api\V1\FacilityType\FacilityTypeController;
+use App\Http\Controllers\Api\V1\IncidentType\IncidentTypeController;
 use App\Http\Controllers\Api\V1\Module\ModuleController;
 use App\Http\Controllers\Api\V1\Municipality\MunicipalityController;
 use App\Http\Controllers\Api\V1\Need\NeedController;
@@ -16,6 +18,7 @@ use App\Http\Controllers\Api\V1\Organization\OrganizationController;
 use App\Http\Controllers\Api\V1\OrganizationType\OrganizationTypeController;
 use App\Http\Controllers\Api\V1\Permission\PermissionController;
 use App\Http\Controllers\Api\V1\Person\PersonController;
+use App\Http\Controllers\Api\V1\PropertyType\PropertyTypeController;
 use App\Http\Controllers\Api\V1\Registration\RegistrationController;
 use App\Http\Controllers\Api\V1\Role\RoleController;
 use App\Http\Controllers\Api\V1\SearchReport\SearchReportController;
@@ -50,6 +53,12 @@ Route::name('api.v1.')->group(function (): void {
 
     Route::get('facility-types', [FacilityTypeController::class, 'index'])
         ->name('facility-types.index');
+
+    Route::get('property-types', [PropertyTypeController::class, 'index'])
+        ->name('property-types.index');
+
+    Route::get('incident-types', [IncidentTypeController::class, 'index'])
+        ->name('incident-types.index');
 
     Route::get('auth/{provider}/redirect', [SocialLoginController::class, 'redirect'])
         ->name('auth.social.redirect');
@@ -103,5 +112,8 @@ Route::name('api.v1.')->group(function (): void {
 
         Route::apiResource('organization-types', OrganizationTypeController::class)->except(['index']);
         Route::apiResource('facility-types', FacilityTypeController::class)->except(['index']);
+        Route::apiResource('property-types', PropertyTypeController::class)->except(['index']);
+        Route::apiResource('incident-types', IncidentTypeController::class)->except(['index']);
+        Route::apiResource('affectation-severities', AffectationSeverityController::class)->except(['index']);
     });
 });

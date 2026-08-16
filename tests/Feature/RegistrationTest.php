@@ -4,6 +4,8 @@ use App\Models\Person;
 use Illuminate\Support\Carbon;
 
 it('registers a person publicly', function () {
+    $severities = derrumbesSeverities();
+
     $response = $this->postJson('/api/v1/registrations', [
         'document_type' => 'CC',
         'document_number' => '123456789',
@@ -14,7 +16,8 @@ it('registers a person publicly', function () {
         'municipality' => 'Buenaventura',
         'neighborhood' => 'La Playita',
         'sector' => 'urban',
-        'severity' => 'partial',
+        'incident_type_id' => $severities['incident_type_id'],
+        'severities' => [$severities['partial_severity_id']],
         'data_consent' => true,
     ]);
 
@@ -31,6 +34,8 @@ it('registers a person publicly', function () {
 });
 
 it('returns the existing record when the document is already registered', function () {
+    $severities = derrumbesSeverities();
+
     Person::factory()->create([
         'document_type' => 'CC',
         'document_number' => '123456789',
@@ -46,7 +51,8 @@ it('returns the existing record when the document is already registered', functi
         'phone' => '3001234567',
         'municipality' => 'Buenaventura',
         'sector' => 'urban',
-        'severity' => 'partial',
+        'incident_type_id' => $severities['incident_type_id'],
+        'severities' => [$severities['partial_severity_id']],
         'data_consent' => true,
     ]);
 
@@ -67,6 +73,8 @@ it('requires data consent', function () {
 });
 
 it('rejects invalid phone numbers', function () {
+    $severities = derrumbesSeverities();
+
     $this->postJson('/api/v1/registrations', [
         'document_type' => 'CC',
         'document_number' => '123456789',
@@ -75,12 +83,15 @@ it('rejects invalid phone numbers', function () {
         'phone' => '123456',
         'municipality' => 'Buenaventura',
         'sector' => 'urban',
-        'severity' => 'partial',
+        'incident_type_id' => $severities['incident_type_id'],
+        'severities' => [$severities['partial_severity_id']],
         'data_consent' => true,
     ])->assertUnprocessable()->assertJsonValidationErrors('phone');
 });
 
 it('accepts phone numbers with the +57 country code', function () {
+    $severities = derrumbesSeverities();
+
     $this->postJson('/api/v1/registrations', [
         'document_type' => 'CC',
         'document_number' => '123456789',
@@ -90,12 +101,15 @@ it('accepts phone numbers with the +57 country code', function () {
         'phone' => '+573001234567',
         'municipality' => 'Buenaventura',
         'sector' => 'urban',
-        'severity' => 'partial',
+        'incident_type_id' => $severities['incident_type_id'],
+        'severities' => [$severities['partial_severity_id']],
         'data_consent' => true,
     ])->assertCreated();
 });
 
 it('rejects spam submissions via the honeypot field', function () {
+    $severities = derrumbesSeverities();
+
     $this->postJson('/api/v1/registrations', [
         'document_type' => 'CC',
         'document_number' => '123456789',
@@ -105,7 +119,8 @@ it('rejects spam submissions via the honeypot field', function () {
         'phone' => '3001234567',
         'municipality' => 'Buenaventura',
         'sector' => 'urban',
-        'severity' => 'partial',
+        'incident_type_id' => $severities['incident_type_id'],
+        'severities' => [$severities['partial_severity_id']],
         'data_consent' => true,
         'website' => 'http://spam.example',
     ])->assertUnprocessable()->assertJsonValidationErrors('website');
@@ -122,6 +137,8 @@ it('returns a validation envelope with 422 status', function () {
 });
 
 it('requires a birth date for every new person', function () {
+    $severities = derrumbesSeverities();
+
     $this->postJson('/api/v1/registrations', [
         'document_type' => 'CC',
         'document_number' => '123456789',
@@ -130,12 +147,15 @@ it('requires a birth date for every new person', function () {
         'phone' => '3001234567',
         'municipality' => 'Buenaventura',
         'sector' => 'urban',
-        'severity' => 'partial',
+        'incident_type_id' => $severities['incident_type_id'],
+        'severities' => [$severities['partial_severity_id']],
         'data_consent' => true,
     ])->assertUnprocessable()->assertJsonValidationErrors('birth_date');
 });
 
 it('stores the birth date and computes the current age', function () {
+    $severities = derrumbesSeverities();
+
     $this->postJson('/api/v1/registrations', [
         'document_type' => 'CC',
         'document_number' => '123456789',
@@ -145,7 +165,8 @@ it('stores the birth date and computes the current age', function () {
         'phone' => '3001234567',
         'municipality' => 'Buenaventura',
         'sector' => 'urban',
-        'severity' => 'partial',
+        'incident_type_id' => $severities['incident_type_id'],
+        'severities' => [$severities['partial_severity_id']],
         'data_consent' => true,
     ])->assertCreated()
         ->assertJsonPath('data.attributes.birth_date', '1995-06-15')

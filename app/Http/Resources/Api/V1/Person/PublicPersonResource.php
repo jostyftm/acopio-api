@@ -60,7 +60,9 @@ class PublicPersonResource extends JsonResource
             'affectation' => $this->whenLoaded('affectation', fn (): ?array => $this->affectation === null
                 ? null
                 : [
-                    'severity' => $this->affectation->severity?->value,
+                    'severities' => $this->affectation->severities->map(
+                        fn ($severity): string => $severity->code,
+                    )->values(),
                     'needs' => $this->affectation->needs->map(
                         fn ($need): array => ['id' => $need->id, 'name' => $need->name],
                     )->values(),

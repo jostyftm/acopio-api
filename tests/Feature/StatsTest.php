@@ -1,6 +1,5 @@
 <?php
 
-use App\Enums\AffectationSeverity;
 use App\Models\Affectation;
 use App\Models\Municipality;
 use App\Models\Need;
@@ -22,6 +21,7 @@ beforeEach(function () {
 
 it('returns aggregated statistics for authenticated users', function () {
     $this->seed(RolePermissionSeeder::class);
+    $severities = derrumbesSeverities();
     $cali = Municipality::where('code', '76001')->firstOrFail()->id;
     $medellin = Municipality::where('code', '05001')->firstOrFail()->id;
 
@@ -54,14 +54,16 @@ it('returns aggregated statistics for authenticated users', function () {
 
     $partial = Affectation::query()->create([
         'person_id' => Person::where('document_number', '123456789')->firstOrFail()->id,
-        'severity' => AffectationSeverity::Partial,
+        'incident_type_id' => $severities['incident_type_id'],
     ]);
+    $partial->severities()->attach($severities['partial_severity_id']);
     $partial->needs()->attach($shelter);
 
     $total = Affectation::query()->create([
         'person_id' => Person::where('document_number', '987654321')->firstOrFail()->id,
-        'severity' => AffectationSeverity::Total,
+        'incident_type_id' => $severities['incident_type_id'],
     ]);
+    $total->severities()->attach($severities['total_severity_id']);
     $total->needs()->attach($children);
 
     $user = User::factory()->create();
@@ -81,6 +83,9 @@ it('returns aggregated statistics for authenticated users', function () {
         ->assertJsonPath('data.total_affected_people', 2)
         ->assertJsonPath('data.by_affectation_severity.partial', 1)
         ->assertJsonPath('data.by_affectation_severity.total', 1)
+        ->assertJsonPath('data.by_property_type', [])
+        ->assertJsonPath('data.by_incident_type.0.display_name', 'Derrumbes')
+        ->assertJsonPath('data.by_incident_type.0.total', 2)
         ->assertJsonPath('data.needs_by_impact_level.high', 1)
         ->assertJsonPath('data.needs_by_impact_level.medium', 0)
         ->assertJsonPath('data.needs_by_impact_level.low', 1);

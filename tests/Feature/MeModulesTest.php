@@ -51,6 +51,8 @@ it('returns the system group with its children only for admins', function () {
         'modules',
         'organization-types',
         'facility-types',
+        'property-types',
+        'incident-types',
     ]);
 });
 

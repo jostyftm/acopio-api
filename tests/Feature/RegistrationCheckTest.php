@@ -27,6 +27,8 @@ it('returns exists=true without affectation for an existing person', function ()
 });
 
 it('returns exists=true with the affectation summary when the person has one', function () {
+    $severities = derrumbesSeverities();
+
     $level = SeverityNeed::query()->firstOrCreate(['code_level' => 'medium'], ['display_name' => 'Medio']);
     $need = Need::query()->create([
         'name' => 'Comida',
@@ -40,16 +42,17 @@ it('returns exists=true with the affectation summary when the person has one', f
         'last_name' => 'Garcia',
     ]);
     $affectation = $person->affectation()->create([
-        'severity' => 'total',
+        'incident_type_id' => $severities['incident_type_id'],
         'description' => 'Vivienda destruida',
     ]);
+    $affectation->severities()->attach($severities['total_severity_id']);
     $affectation->needs()->attach($need);
 
     $this->getJson('/api/v1/registrations/check?document_type=CC&document_number=123456789')
         ->assertOk()
         ->assertJsonPath('data.exists', true)
         ->assertJsonPath('data.has_affectation', true)
-        ->assertJsonPath('data.affectation.severity', 'total')
+        ->assertJsonPath('data.affectation.severities', ['total'])
         ->assertJsonPath('data.affectation.needs', ['Comida']);
 });
 
