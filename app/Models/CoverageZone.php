@@ -13,12 +13,16 @@ class CoverageZone extends Model
         'municipality_id',
         'name',
         'polygon',
+        'map_center',
+        'map_zoom',
     ];
 
     protected function casts(): array
     {
         return [
             'polygon' => Polygon::class,
+            'map_center' => 'array',
+            'map_zoom' => 'decimal:2',
         ];
     }
 

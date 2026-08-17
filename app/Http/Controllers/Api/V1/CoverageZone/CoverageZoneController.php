@@ -27,7 +27,7 @@ class CoverageZoneController extends Controller
 
         $zones = CoverageZoneResource::collection(
             QueryBuilder::for(CoverageZone::class)
-                ->with(['municipality', 'organizations'])
+                ->with(['municipality.department', 'organizations'])
                 ->allowedFilters(
                     AllowedFilter::partial('name'),
                     AllowedFilter::exact('municipality_id'),
@@ -47,10 +47,12 @@ class CoverageZoneController extends Controller
     {
         $this->authorize('create', CoverageZone::class);
 
-        $zone = CoverageZone::query()->create($request->validated());
+        $zone = CoverageZone::query()->create(
+            $this->normalizePolygon($request->validated()),
+        );
 
         return ApiResponse::success(
-            CoverageZoneResource::make($zone->load('municipality')),
+            CoverageZoneResource::make($zone->load('municipality.department')),
             null,
             201,
         );
@@ -63,11 +65,40 @@ class CoverageZoneController extends Controller
     {
         $this->authorize('update', $coverageZone);
 
-        $coverageZone->update($request->validated());
+        $coverageZone->update(
+            $this->normalizePolygon($request->validated()),
+        );
 
         return ApiResponse::success(
-            CoverageZoneResource::make($coverageZone->load('municipality')),
+            CoverageZoneResource::make($coverageZone->load('municipality.department')),
         );
+    }
+
+    /**
+     * Convierte el polígono recibido como array de [lon, lat] a WKT cerrado.
+     *
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    private function normalizePolygon(array $data): array
+    {
+        if (! isset($data['polygon']) || ! is_array($data['polygon'])) {
+            return $data;
+        }
+
+        $points = array_map(
+            fn (array $point): string => sprintf('%s %s', $point[0], $point[1]),
+            $data['polygon'],
+        );
+
+        // Cierra el anillo repitiendo el primer punto.
+        if (count($points) > 0) {
+            $points[] = $points[0];
+        }
+
+        $data['polygon'] = 'POLYGON(('.implode(', ', $points).'))';
+
+        return $data;
     }
 
     /**

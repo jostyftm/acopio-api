@@ -30,8 +30,15 @@ function makeCoverageZonePayload(int $municipalityId, array $attributes = []): a
     return array_merge([
         'municipality_id' => $municipalityId,
         'name' => 'Zona Centro',
-        'polygon' => 'POLYGON((-76.6 3.4, -76.5 3.4, -76.5 3.5, -76.6 3.4))',
+        'polygon' => [[-76.6, 3.4], [-76.5, 3.4], [-76.5, 3.5]],
+        'map_center' => ['lng' => -76.55, 'lat' => 3.45],
+        'map_zoom' => 12,
     ], $attributes);
+}
+
+function makeCoverageZoneWktPolygon(): string
+{
+    return 'POLYGON((-76.6 3.4, -76.5 3.4, -76.5 3.5, -76.6 3.4))';
 }
 
 it('lets an admin create, update and delete a coverage zone', function () {
@@ -41,7 +48,9 @@ it('lets an admin create, update and delete a coverage zone', function () {
     $this->postJson('/api/v1/coverage-zones', makeCoverageZonePayload($this->municipality->id))
         ->assertCreated()
         ->assertJsonPath('data.attributes.name', 'Zona Centro')
-        ->assertJsonPath('data.attributes.polygon.type', 'Polygon');
+        ->assertJsonPath('data.attributes.polygon.type', 'Polygon')
+        ->assertJsonPath('data.attributes.municipality.department', 'Valle Del Cauca')
+        ->assertJsonPath('data.attributes.municipality.dpto_code', '76');
 
     $zone = CoverageZone::query()->firstOrFail();
 
@@ -61,14 +70,75 @@ it('rejects coverage zone management for non-admins', function () {
     $this->postJson('/api/v1/coverage-zones', makeCoverageZonePayload($this->municipality->id))->assertStatus(403);
 });
 
+it('rejects a polygon with fewer than 3 distinct points', function () {
+    $admin = makeUserWithRole('admin');
+    Passport::actingAs($admin);
+
+    $this->postJson('/api/v1/coverage-zones', makeCoverageZonePayload($this->municipality->id, [
+        'polygon' => [[-76.6, 3.4], [-76.6, 3.4], [-76.5, 3.4]],
+    ]))->assertUnprocessable()
+        ->assertJsonValidationErrors('polygon');
+});
+
+it('rejects a polygon whose ring is already closed', function () {
+    $admin = makeUserWithRole('admin');
+    Passport::actingAs($admin);
+
+    $this->postJson('/api/v1/coverage-zones', makeCoverageZonePayload($this->municipality->id, [
+        'polygon' => [[-76.6, 3.4], [-76.5, 3.4], [-76.5, 3.5], [-76.6, 3.4]],
+    ]))->assertUnprocessable()
+        ->assertJsonValidationErrors('polygon');
+});
+
+it('rejects a polygon with collinear points', function () {
+    $admin = makeUserWithRole('admin');
+    Passport::actingAs($admin);
+
+    $this->postJson('/api/v1/coverage-zones', makeCoverageZonePayload($this->municipality->id, [
+        'polygon' => [[-76.6, 3.4], [-76.5, 3.4], [-76.4, 3.4]],
+    ]))->assertUnprocessable()
+        ->assertJsonValidationErrors('polygon');
+});
+
+it('stores and returns the map viewport for a coverage zone', function () {
+    $admin = makeUserWithRole('admin');
+    Passport::actingAs($admin);
+
+    $this->postJson('/api/v1/coverage-zones', makeCoverageZonePayload($this->municipality->id))
+        ->assertCreated()
+        ->assertJsonPath('data.attributes.map_center.lng', -76.55)
+        ->assertJsonPath('data.attributes.map_center.lat', 3.45)
+        ->assertJsonPath('data.attributes.map_zoom', '12.00');
+
+    $zone = CoverageZone::query()->firstOrFail();
+
+    $this->putJson("/api/v1/coverage-zones/{$zone->id}", [
+        'map_center' => ['lng' => -76.6, 'lat' => 3.4],
+        'map_zoom' => 11,
+    ])->assertOk()
+        ->assertJsonPath('data.attributes.map_center.lng', -76.6)
+        ->assertJsonPath('data.attributes.map_center.lat', 3.4)
+        ->assertJsonPath('data.attributes.map_zoom', '11.00');
+});
+
+it('rejects a coverage zone without a valid map viewport', function () {
+    $admin = makeUserWithRole('admin');
+    Passport::actingAs($admin);
+
+    $this->postJson('/api/v1/coverage-zones', makeCoverageZonePayload($this->municipality->id, [
+        'map_center' => ['lng' => -76.6, 'lat' => 95],
+    ]))->assertUnprocessable()
+        ->assertJsonValidationErrors('map_center.lat');
+});
+
 it('lets an admin assign coverage zones to an organization', function () {
     $admin = makeUserWithRole('admin');
     Passport::actingAs($admin);
 
     $organization = Organization::factory()->create();
 
-    $zoneA = CoverageZone::query()->create(makeCoverageZonePayload($this->municipality->id, ['name' => 'Zona A']));
-    $zoneB = CoverageZone::query()->create(makeCoverageZonePayload($this->municipality->id, ['name' => 'Zona B']));
+    $zoneA = CoverageZone::query()->create(makeCoverageZonePayload($this->municipality->id, ['name' => 'Zona A', 'polygon' => makeCoverageZoneWktPolygon()]));
+    $zoneB = CoverageZone::query()->create(makeCoverageZonePayload($this->municipality->id, ['name' => 'Zona B', 'polygon' => makeCoverageZoneWktPolygon()]));
 
     $this->putJson("/api/v1/organizations/{$organization->id}/coverage", [
         'coverage_zone_ids' => [$zoneA->id, $zoneB->id],
@@ -86,7 +156,7 @@ it('lets an admin assign coverage zones to an organization', function () {
 });
 
 it('resolves the coverage zone that covers a reported location', function () {
-    $zone = CoverageZone::query()->create(makeCoverageZonePayload($this->municipality->id));
+    $zone = CoverageZone::query()->create(makeCoverageZonePayload($this->municipality->id, ['polygon' => makeCoverageZoneWktPolygon()]));
 
     $inside = CoverageZone::findForCoordinates(3.43, -76.55);
 
@@ -96,7 +166,7 @@ it('resolves the coverage zone that covers a reported location', function () {
 });
 
 it('resolves the organizations covering a reported location', function () {
-    $zone = CoverageZone::query()->create(makeCoverageZonePayload($this->municipality->id));
+    $zone = CoverageZone::query()->create(makeCoverageZonePayload($this->municipality->id, ['polygon' => makeCoverageZoneWktPolygon()]));
     $covered = Organization::factory()->create();
     $uncovered = Organization::factory()->create();
 

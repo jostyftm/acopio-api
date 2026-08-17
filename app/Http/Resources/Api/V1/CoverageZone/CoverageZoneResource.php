@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources\Api\V1\CoverageZone;
 
+use App\Http\Resources\Api\V1\Municipality\MunicipalityResource;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -22,11 +23,10 @@ class CoverageZoneResource extends JsonResource
                 'municipality_id' => $this->municipality_id,
                 'municipality' => $this->whenLoaded('municipality', fn () => $this->municipality === null
                     ? null
-                    : [
-                        'id' => $this->municipality->id,
-                        'name' => $this->municipality->name,
-                    ]),
+                    : MunicipalityResource::make($this->municipality)),
                 'polygon' => $this->whenNotNull($this->polygonAsGeoJson()),
+                'map_center' => $this->whenNotNull($this->map_center),
+                'map_zoom' => $this->whenNotNull($this->map_zoom),
                 'created_at' => $this->created_at,
                 'updated_at' => $this->updated_at,
             ],
