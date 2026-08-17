@@ -25,6 +25,7 @@ class UpdateOrganizationRequest extends FormRequest
     {
         return [
             'organization_type_id' => ['sometimes', 'integer', 'exists:organization_types,id', Rule::exists('organization_types', 'id')->where('is_active', true)],
+            'municipality_id' => ['sometimes', 'nullable', 'integer', 'exists:municipalities,id'],
             'name' => ['sometimes', 'string', 'max:240'],
             'nit' => ['sometimes', 'nullable', 'string', 'max:40', Rule::unique('organizations', 'nit')->ignore($this->route('organization'))],
             'description' => ['sometimes', 'nullable', 'string'],

@@ -7,6 +7,7 @@ use Database\Factories\OrganizationFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Organization extends Model
@@ -16,6 +17,7 @@ class Organization extends Model
 
     protected $fillable = [
         'organization_type_id',
+        'municipality_id',
         'name',
         'nit',
         'description',
@@ -37,6 +39,11 @@ class Organization extends Model
         return $this->belongsTo(OrganizationType::class, 'organization_type_id');
     }
 
+    public function municipality(): BelongsTo
+    {
+        return $this->belongsTo(Municipality::class);
+    }
+
     public function users(): HasMany
     {
         return $this->hasMany(User::class);
@@ -45,5 +52,10 @@ class Organization extends Model
     public function facilities(): HasMany
     {
         return $this->hasMany(Facility::class);
+    }
+
+    public function coverageZones(): BelongsToMany
+    {
+        return $this->belongsToMany(CoverageZone::class, 'organization_coverage_zone')->withTimestamps();
     }
 }

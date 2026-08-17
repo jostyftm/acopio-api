@@ -21,6 +21,7 @@ class OrganizationFactory extends Factory
     {
         return [
             'organization_type_id' => OrganizationType::factory(),
+            'municipality_id' => null,
             'name' => fake()->company(),
             'nit' => fake()->unique()->numerify('##########-0'),
             'description' => fake()->paragraph(),

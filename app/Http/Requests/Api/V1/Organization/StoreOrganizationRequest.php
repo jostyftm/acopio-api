@@ -33,6 +33,13 @@ class StoreOrganizationRequest extends FormRequest
             'organization_type_id' => ['required', 'integer', 'exists:organization_types,id', Rule::exists('organization_types', 'id')->where('is_active', true)],
 
             /**
+             * Municipality where the organization operates.
+             *
+             * @example 1024
+             */
+            'municipality_id' => ['nullable', 'integer', 'exists:municipalities,id'],
+
+            /**
              * Legal or common name of the organization.
              *
              * @example Fundación Esperanza

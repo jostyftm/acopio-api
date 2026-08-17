@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1\Organization;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\Organization\StoreOrganizationRequest;
+use App\Http\Requests\Api\V1\Organization\UpdateOrganizationCoverageRequest;
 use App\Http\Requests\Api\V1\Organization\UpdateOrganizationRequest;
 use App\Http\Resources\Api\V1\Organization\OrganizationResource;
 use App\Models\Organization;
@@ -35,7 +36,7 @@ class OrganizationController extends Controller
 
         $organizations = OrganizationResource::collection(
             QueryBuilder::for(Organization::class)
-                ->with('type')
+                ->with('type', 'municipality')
                 ->withCount('users')
                 ->allowedFilters(
                     AllowedFilter::partial('name'),
@@ -61,7 +62,7 @@ class OrganizationController extends Controller
         $organization = $this->organizationService->create($request->validated());
 
         return ApiResponse::success(
-            OrganizationResource::make($organization->load('type')->loadCount('users')),
+            OrganizationResource::make($organization->load('type', 'municipality')->loadCount('users')),
             null,
             201,
         );
@@ -79,7 +80,7 @@ class OrganizationController extends Controller
         $this->authorize('view', $organization);
 
         return ApiResponse::success(
-            OrganizationResource::make($organization->load('type')->loadCount('users')),
+            OrganizationResource::make($organization->load('type', 'municipality', 'coverageZones.municipality')->loadCount('users')),
         );
     }
 
@@ -96,7 +97,24 @@ class OrganizationController extends Controller
         $organization = $this->organizationService->update($organization, $request->validated());
 
         return ApiResponse::success(
-            OrganizationResource::make($organization->load('type')->loadCount('users')),
+            OrganizationResource::make($organization->load('type', 'municipality', 'coverageZones.municipality')->loadCount('users')),
+        );
+    }
+
+    /**
+     * Asigna las zonas de cobertura de una organización.
+     *
+     * @param  UpdateOrganizationCoverageRequest  $request  Identificadores de las zonas a asignar.
+     * @param  Organization  $organization  La organización a actualizar.
+     */
+    public function updateCoverage(UpdateOrganizationCoverageRequest $request, Organization $organization): JsonResponse
+    {
+        $this->authorize('update', $organization);
+
+        $organization->coverageZones()->sync($request->validated('coverage_zone_ids'));
+
+        return ApiResponse::success(
+            OrganizationResource::make($organization->load('type', 'coverageZones.municipality')->loadCount('users')),
         );
     }
 

@@ -25,11 +25,22 @@ class OrganizationResource extends JsonResource
                 'contact_email' => $this->contact_email,
                 'contact_phone' => $this->contact_phone,
                 'status' => $this->status->value,
+                'municipality_id' => $this->municipality_id,
+                'municipality' => $this->whenLoaded('municipality', fn () => $this->municipality ? [
+                    'id' => $this->municipality->id,
+                    'name' => $this->municipality->name,
+                ] : null),
                 'organization_type' => $this->whenLoaded('type', fn () => [
                     'id' => $this->type->id,
                     'code' => $this->type->code,
                     'display_name' => $this->type->display_name,
                 ]),
+                'coverage_zones' => $this->whenLoaded('coverageZones', fn () => $this->coverageZones->map(fn ($zone) => [
+                    'id' => $zone->id,
+                    'name' => $zone->name,
+                    'municipality_id' => $zone->municipality_id,
+                    'municipality' => $zone->municipality?->name,
+                ])),
                 'user_count' => $this->whenCounted('users'),
                 'created_at' => $this->created_at,
                 'updated_at' => $this->updated_at,
