@@ -35,6 +35,11 @@ class Need extends Model
         return $this->belongsToMany(Affectation::class)->withTimestamps();
     }
 
+    public function incidentTypes(): BelongsToMany
+    {
+        return $this->belongsToMany(IncidentType::class, 'incident_type_need')->withTimestamps();
+    }
+
     public function scopeActive(Builder $query): Builder
     {
         return $query->where('active', true);

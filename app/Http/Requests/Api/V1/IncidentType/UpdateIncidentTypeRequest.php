@@ -29,6 +29,8 @@ class UpdateIncidentTypeRequest extends FormRequest
             'description' => ['sometimes', 'nullable', 'string'],
             'severity_mode' => ['sometimes', Rule::in(SeverityMode::values())],
             'is_active' => ['sometimes', 'boolean'],
+            'needs' => ['nullable', 'array', 'max:20'],
+            'needs.*' => ['integer', Rule::exists('needs', 'id')],
         ];
     }
 }

@@ -3,6 +3,7 @@
 namespace App\Http\Resources\Api\V1\IncidentType;
 
 use App\Http\Resources\Api\V1\AffectationSeverity\AffectationSeverityResource;
+use App\Http\Resources\Api\V1\Need\NeedResource;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -25,6 +26,11 @@ class IncidentTypeResource extends JsonResource
             'severities' => $this->whenLoaded(
                 'severities',
                 fn () => AffectationSeverityResource::collection($this->severities),
+                [],
+            ),
+            'needs' => $this->whenLoaded(
+                'needs',
+                fn () => NeedResource::collection($this->needs),
                 [],
             ),
         ];

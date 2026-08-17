@@ -2,6 +2,8 @@
 
 use App\Models\AffectationSeverity;
 use App\Models\IncidentType;
+use App\Models\Need;
+use App\Models\SeverityNeed;
 use App\Models\User;
 use Database\Seeders\RolePermissionSeeder;
 use Laravel\Passport\Passport;
@@ -110,6 +112,28 @@ it('allows an admin to update an incident type', function () {
     ])->assertOk()
         ->assertJsonPath('data.display_name', 'Derrumbes y deslizamientos')
         ->assertJsonPath('data.severity_mode', 'multiple');
+});
+
+it('syncs the needs of an incident type on create and update', function () {
+    Passport::actingAs(makeIncidentTypeAdmin());
+
+    $level = SeverityNeed::query()->firstOrCreate(['code_level' => 'medium'], ['display_name' => 'Medio']);
+    $needA = Need::query()->create(['name' => 'Comida', 'normalized_name' => 'COMIDA', 'severity_need_id' => $level->id]);
+    $needB = Need::query()->create(['name' => 'Ropa', 'normalized_name' => 'ROPA', 'severity_need_id' => $level->id]);
+
+    $this->postJson('/api/v1/incident-types', incidentTypePayload(['needs' => [$needA->id]]))
+        ->assertCreated()
+        ->assertJsonPath('data.needs.0.id', $needA->id);
+
+    $type = IncidentType::query()->where('code', 'inundaciones')->firstOrFail();
+
+    expect($type->needs->pluck('id')->all())->toBe([$needA->id]);
+
+    $this->putJson("/api/v1/incident-types/{$type->id}", ['needs' => [$needB->id]])
+        ->assertOk()
+        ->assertJsonPath('data.needs.0.id', $needB->id);
+
+    expect($type->fresh()->needs->pluck('id')->all())->toBe([$needB->id]);
 });
 
 it('allows an admin to delete an incident type without affectations', function () {

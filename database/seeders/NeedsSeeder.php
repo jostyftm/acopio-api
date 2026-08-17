@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Enums\ImpactLevel;
+use App\Models\IncidentType;
 use App\Models\Need;
 use App\Models\SeverityNeed;
 use Illuminate\Database\Seeder;
@@ -40,6 +41,17 @@ class NeedsSeeder extends Seeder
     ];
 
     /**
+     * Necesidades asociadas a cada tipo de incidente (por código del tipo).
+     *
+     * @var array<string, list<string>>
+     */
+    private const INCIDENT_TYPE_NEEDS = [
+        'derrumbes' => ['Dónde dormir', 'Comida', 'Ropa', 'Kit de aseo', 'Atención médica', 'Medicamentos', 'Albergue', 'Transporte', 'Reconstrucción', 'Niños', 'Adultos mayores', 'Discapacidad', 'Embarazadas', 'Enfermedad crónica', 'Pañales'],
+        'incendios' => ['Dónde dormir', 'Comida', 'Ropa', 'Kit de aseo', 'Atención médica', 'Medicamentos', 'Albergue', 'Transporte', 'Reconstrucción', 'Niños', 'Adultos mayores', 'Discapacidad', 'Embarazadas', 'Enfermedad crónica', 'Pañales'],
+        'alteracion_orden_publico' => ['Atención médica', 'Medicamentos', 'Transporte', 'Niños', 'Adultos mayores', 'Discapacidad', 'Embarazadas', 'Enfermedad crónica'],
+    ];
+
+    /**
      * Run the database seeds.
      */
     public function run(): void
@@ -51,8 +63,10 @@ class NeedsSeeder extends Seeder
             ),
         ]);
 
+        $needsByNormalizedName = [];
+
         foreach (self::NEEDS as $need) {
-            Need::query()->updateOrCreate(
+            $model = Need::query()->updateOrCreate(
                 ['normalized_name' => Need::normalizeName($need['name'])],
                 [
                     'name' => $need['name'],
@@ -60,6 +74,31 @@ class NeedsSeeder extends Seeder
                     'severity_need_id' => $levels[ImpactLevel::from($need['code_level'])->value]->id,
                 ],
             );
+
+            $needsByNormalizedName[$model->normalized_name] = $model;
+        }
+
+        $this->linkIncidentTypeNeeds($needsByNormalizedName);
+    }
+
+    /**
+     * @param  array<string, Need>  $needsByNormalizedName
+     */
+    private function linkIncidentTypeNeeds(array $needsByNormalizedName): void
+    {
+        foreach (self::INCIDENT_TYPE_NEEDS as $code => $needNames) {
+            $incidentType = IncidentType::query()->where('code', $code)->first();
+
+            if ($incidentType === null) {
+                continue;
+            }
+
+            $needs = collect($needNames)
+                ->map(fn (string $name): ?Need => $needsByNormalizedName[Need::normalizeName($name)] ?? null)
+                ->filter()
+                ->pluck('id');
+
+            $incidentType->needs()->sync($needs);
         }
     }
 }

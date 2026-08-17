@@ -22,7 +22,7 @@ class IncidentTypeController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $query = IncidentType::query()->with('severities')->orderBy('display_name');
+        $query = IncidentType::query()->with('severities', 'needs')->orderBy('display_name');
 
         if (! $request->boolean('include_inactive')) {
             $query->where('is_active', true);
@@ -38,9 +38,13 @@ class IncidentTypeController extends Controller
      */
     public function store(StoreIncidentTypeRequest $request): JsonResponse
     {
-        $type = IncidentType::query()->create($request->validated());
+        $type = IncidentType::query()->create($request->safe()->except('needs'));
 
-        return ApiResponse::success(IncidentTypeResource::make($type->load('severities')), null, 201);
+        if ($request->has('needs')) {
+            $type->needs()->sync($request->input('needs', []));
+        }
+
+        return ApiResponse::success(IncidentTypeResource::make($type->load('severities', 'needs')), null, 201);
     }
 
     /**
@@ -50,7 +54,7 @@ class IncidentTypeController extends Controller
      */
     public function show(IncidentType $incidentType): JsonResponse
     {
-        return ApiResponse::success(IncidentTypeResource::make($incidentType->load('severities')));
+        return ApiResponse::success(IncidentTypeResource::make($incidentType->load('severities', 'needs')));
     }
 
     /**
@@ -61,9 +65,13 @@ class IncidentTypeController extends Controller
      */
     public function update(UpdateIncidentTypeRequest $request, IncidentType $incidentType): JsonResponse
     {
-        $incidentType->update($request->validated());
+        $incidentType->update($request->safe()->except('needs'));
 
-        return ApiResponse::success(IncidentTypeResource::make($incidentType->load('severities')));
+        if ($request->has('needs')) {
+            $incidentType->needs()->sync($request->input('needs', []));
+        }
+
+        return ApiResponse::success(IncidentTypeResource::make($incidentType->load('severities', 'needs')));
     }
 
     /**
