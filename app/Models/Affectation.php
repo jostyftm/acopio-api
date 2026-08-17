@@ -16,20 +16,37 @@ class Affectation extends Model
         'incident_type_id',
         'reported_by',
         'organization_id',
+        'status_id',
         'description',
+        'address',
         'location',
+        'verified_by',
+        'verified_at',
+        'located_at',
     ];
 
     protected function casts(): array
     {
         return [
             'location' => Point::class,
+            'verified_at' => 'datetime',
+            'located_at' => 'datetime',
         ];
     }
 
     public function person(): BelongsTo
     {
         return $this->belongsTo(Person::class);
+    }
+
+    public function status(): BelongsTo
+    {
+        return $this->belongsTo(AffectationStatus::class, 'status_id');
+    }
+
+    public function verifiedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'verified_by');
     }
 
     public function incidentType(): BelongsTo

@@ -53,6 +53,7 @@ it('returns the system group with its children only for admins', function () {
         'facility-types',
         'property-types',
         'incident-types',
+        'coverage-zones',
     ]);
 });
 

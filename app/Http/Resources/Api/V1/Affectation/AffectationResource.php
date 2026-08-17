@@ -26,6 +26,20 @@ class AffectationResource extends JsonResource
                 'incident_type_id' => $this->incident_type_id,
                 'reported_by' => $this->reported_by,
                 'organization_id' => $this->organization_id,
+                'status_id' => $this->status_id,
+                'status' => $this->whenLoaded('status', fn (): ?array => $this->status === null
+                    ? null
+                    : [
+                        'id' => $this->status->id,
+                        'code' => $this->status->code,
+                        'name' => $this->status->name,
+                        'icon' => $this->status->icon,
+                        'text_color' => $this->status->text_color,
+                        'bg_color' => $this->status->bg_color,
+                    ]),
+                'address' => $this->address,
+                'verified_at' => $this->verified_at?->toISOString(),
+                'located_at' => $this->located_at?->toISOString(),
                 'incident_type' => $this->whenLoaded('incidentType', fn (): ?array => $this->incidentType === null
                     ? null
                     : [
@@ -101,6 +115,12 @@ class AffectationResource extends JsonResource
                         'id' => $this->reporter->id,
                         'name' => $this->reporter->name,
                         'email' => $this->reporter->email,
+                    ]),
+                'verified_by' => $this->whenLoaded('verifiedBy', fn (): ?array => $this->verifiedBy === null
+                    ? null
+                    : [
+                        'id' => $this->verifiedBy->id,
+                        'name' => $this->verifiedBy->name,
                     ]),
                 'organization' => $this->whenLoaded('organization', fn (): ?array => $this->organization === null
                     ? null

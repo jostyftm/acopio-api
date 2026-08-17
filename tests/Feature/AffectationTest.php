@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Affectation;
+use App\Models\IncidentType;
 use App\Models\Municipality;
 use App\Models\Need;
 use App\Models\Organization;
@@ -30,6 +31,9 @@ it('creates an affectation with needs and evidence when registering a person', f
         'normalized_name' => 'COMIDA',
         'severity_need_id' => $level->id,
     ]);
+
+    $incidentTypeId = derrumbesSeverities()['incident_type_id'];
+    IncidentType::query()->findOrFail($incidentTypeId)->needs()->attach($need);
 
     $this->post('/api/v1/registrations', [
         ...baseRegistrationPayload(),
@@ -300,6 +304,8 @@ it('shows a single affectation with its detail', function () {
         'severity_need_id' => $level->id,
     ]);
 
+    IncidentType::query()->findOrFail($severities['incident_type_id'])->needs()->attach($need);
+
     $this->post('/api/v1/registrations', [
         ...baseRegistrationPayload(),
         'severities' => [$severities['total_severity_id']],
@@ -483,30 +489,35 @@ it('registers the family group including the censused person as household head',
 
     $this->post('/api/v1/registrations', [
         ...baseRegistrationPayload(),
-        'family_members' => [
+        'families' => [
             [
-                'document_type' => 'CC',
-                'document_number' => '123456789',
-                'first_name' => 'Maria',
-                'last_name' => 'Garcia',
-                'birth_date' => '1995-06-15',
-                'is_householder' => true,
-            ],
-            [
-                'document_type' => 'CC',
-                'document_number' => '987654321',
-                'first_name' => 'Juan',
-                'last_name' => 'Perez',
-                'birth_date' => '2015-08-01',
-                'is_householder' => false,
-                'evidence' => [UploadedFile::fake()->image('hijo.jpg')],
-            ],
-            [
-                'document_type' => 'TI',
-                'document_number' => '1122334455',
-                'first_name' => 'Luisa',
-                'last_name' => 'Garcia',
-                'birth_date' => '2010-03-20',
+                'members' => [
+                    [
+                        'document_type' => 'CC',
+                        'document_number' => '123456789',
+                        'first_name' => 'Maria',
+                        'last_name' => 'Garcia',
+                        'birth_date' => '1995-06-15',
+                        'is_householder' => true,
+                    ],
+                    [
+                        'document_type' => 'CC',
+                        'document_number' => '987654321',
+                        'first_name' => 'Juan',
+                        'last_name' => 'Perez',
+                        'birth_date' => '2015-08-01',
+                        'is_householder' => false,
+                        'evidence' => [UploadedFile::fake()->image('hijo.jpg')],
+                    ],
+                    [
+                        'document_type' => 'TI',
+                        'document_number' => '1122334455',
+                        'first_name' => 'Luisa',
+                        'last_name' => 'Garcia',
+                        'birth_date' => '2010-03-20',
+                        'is_householder' => false,
+                    ],
+                ],
             ],
         ],
     ])->assertCreated()
@@ -539,14 +550,18 @@ it('reuses an existing person as a family member', function () {
 
     $this->post('/api/v1/registrations', [
         ...baseRegistrationPayload(),
-        'family_members' => [
+        'families' => [
             [
-                'document_type' => 'CC',
-                'document_number' => '987654321',
-                'first_name' => 'Juan',
-                'last_name' => 'Perez',
-                'birth_date' => '1990-01-01',
-                'is_householder' => false,
+                'members' => [
+                    [
+                        'document_type' => 'CC',
+                        'document_number' => '987654321',
+                        'first_name' => 'Juan',
+                        'last_name' => 'Perez',
+                        'birth_date' => '1990-01-01',
+                        'is_householder' => true,
+                    ],
+                ],
             ],
         ],
     ])->assertCreated();
@@ -562,15 +577,19 @@ it('reuses an existing person as a family member', function () {
 it('rejects family members with missing required fields', function () {
     $this->postJson('/api/v1/registrations', [
         ...baseRegistrationPayload(),
-        'family_members' => [
+        'families' => [
             [
-                'document_type' => 'CC',
-                'document_number' => '987654321',
-                'first_name' => 'Juan',
+                'members' => [
+                    [
+                        'document_type' => 'CC',
+                        'document_number' => '987654321',
+                        'first_name' => 'Juan',
+                    ],
+                ],
             ],
         ],
     ])->assertUnprocessable()
-        ->assertJsonValidationErrors(['family_members.0.last_name', 'family_members.0.birth_date']);
+        ->assertJsonValidationErrors('families.0.members.0.last_name');
 });
 
 /**

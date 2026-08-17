@@ -17,7 +17,7 @@ it('lists the module tree for an admin', function () {
         ->assertJsonCount(9, 'data')
         ->assertJsonPath('data.0.attributes.key', 'dashboard')
         ->assertJsonPath('data.8.attributes.key', 'system')
-        ->assertJsonCount(7, 'data.8.attributes.children');
+        ->assertJsonCount(8, 'data.8.attributes.children');
 });
 
 it('creates a module', function () {

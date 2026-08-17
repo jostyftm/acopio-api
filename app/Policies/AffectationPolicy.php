@@ -23,6 +23,17 @@ class AffectationPolicy
         return $user->can('affectations.create');
     }
 
+    public function report(User $user): bool
+    {
+        return $user->can('affectations.report');
+    }
+
+    public function verify(User $user, Affectation $affectation): bool
+    {
+        return $user->can('affectations.verify')
+            && $this->inScope($user, $affectation);
+    }
+
     public function update(User $user, Affectation $affectation): bool
     {
         return $user->can('affectations.update')

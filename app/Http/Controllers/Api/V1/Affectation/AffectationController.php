@@ -3,12 +3,17 @@
 namespace App\Http\Controllers\Api\V1\Affectation;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\V1\Affectation\StoreAffectationReportRequest;
 use App\Http\Requests\Api\V1\Affectation\StoreAffectationRequest;
 use App\Http\Requests\Api\V1\Affectation\UpdateAffectationRequest;
+use App\Http\Requests\Api\V1\Affectation\VerifyAffectationRequest;
 use App\Http\Resources\Api\V1\Affectation\AffectationResource;
 use App\Http\Resources\Api\V1\Person\PersonResource;
 use App\Models\Affectation;
+use App\Models\AffectationStatus;
 use App\Models\Attachment;
+use App\Services\Affectation\AffectationReportService;
+use App\Services\Person\PersonService;
 use App\Services\Registration\RegistrationService;
 use App\Support\ApiResponse;
 use Clickbar\Magellan\Data\Geometries\Point;
@@ -21,6 +26,8 @@ class AffectationController extends Controller
 {
     public function __construct(
         private readonly RegistrationService $registrationService,
+        private readonly AffectationReportService $affectationReportService,
+        private readonly PersonService $personService,
     ) {}
 
     /**
@@ -35,9 +42,11 @@ class AffectationController extends Controller
     {
         $this->authorize('create', Affectation::class);
 
+        $markLocated = $request->user()->can('people.verify');
+
         $person = $this->registrationService->register(
             $request->validated(),
-            markLocated: true,
+            markLocated: $markLocated,
             reporter: $request->user(),
         );
         $person->load(['municipality', 'affectation.needs', 'affectation.incidentType', 'affectation.severities', 'affectation.propertyTypes', 'affectation.attachments', 'affectation.familyMembers.person.attachments']);
@@ -50,6 +59,82 @@ class AffectationController extends Controller
     }
 
     /**
+     * Registra un reporte de incidente sin persona asociada (escenario 1).
+     *
+     * Crea la afectación en estado `reported`: registrada pero sin verificar
+     * ni localizar. No captura datos de persona; la verificación la realiza
+     * posteriormente la organización que cubre la zona. Requiere permiso de
+     * reporte del módulo de afectaciones.
+     */
+    public function storeReport(StoreAffectationReportRequest $request): JsonResponse
+    {
+        $this->authorize('report', Affectation::class);
+
+        $affectation = $this->affectationReportService->report(
+            $request->validated(),
+            $request->user(),
+        );
+
+        $affectation->load(['needs', 'incidentType', 'severities', 'propertyTypes', 'attachments', 'reporter', 'organization', 'status']);
+
+        return ApiResponse::success(
+            AffectationResource::make($affectation),
+            [],
+            201,
+        );
+    }
+
+    /**
+     * Verifica y/o localiza una afectación.
+     *
+     * Marca la afectación como verificada y, si se envían coordenadas, como
+     * localizada. Si la afectación tiene persona asociada, delega en el
+     * servicio de personas para mantener el estado consistente.
+     *
+     * @param  VerifyAffectationRequest  $request  Datos de verificación y ubicación opcional.
+     * @param  Affectation  $affectation  La afectación a verificar.
+     */
+    public function verify(VerifyAffectationRequest $request, Affectation $affectation): JsonResponse
+    {
+        $this->authorize('verify', $affectation);
+
+        $hasLocation = $request->filled(['latitude', 'longitude']);
+        $statusCode = $hasLocation ? 'located' : 'verified';
+        $status = AffectationStatus::query()->where('code', $statusCode)->firstOrFail();
+
+        $affectation->update([
+            'status_id' => $status->id,
+            'verified_by' => $request->user()->id,
+            'verified_at' => now(),
+            'located_at' => $hasLocation ? now() : null,
+        ]);
+
+        if ($affectation->person !== null) {
+            $person = $this->personService->verify($affectation->person, $request->user());
+
+            if ($hasLocation) {
+                $this->personService->locate($person, [
+                    'latitude' => $request->input('latitude'),
+                    'longitude' => $request->input('longitude'),
+                ]);
+            }
+        }
+
+        if ($hasLocation) {
+            $affectation->update([
+                'location' => Point::makeGeodetic(
+                    (float) $request->input('latitude'),
+                    (float) $request->input('longitude'),
+                ),
+            ]);
+        }
+
+        $affectation->load(['person.municipality', 'needs', 'incidentType', 'severities', 'propertyTypes', 'attachments', 'reporter', 'organization', 'status', 'familyMembers.person.attachments']);
+
+        return ApiResponse::success(AffectationResource::make($affectation));
+    }
+
+    /**
      * Lista las afectaciones registradas.
      *
      * Requiere permiso de visualización del módulo de afectaciones.
@@ -59,7 +144,7 @@ class AffectationController extends Controller
         $this->authorize('viewAny', Affectation::class);
 
         $query = Affectation::query()
-            ->with(['person.municipality', 'needs', 'incidentType', 'severities', 'propertyTypes', 'reporter', 'organization'])
+            ->with(['person.municipality', 'needs', 'incidentType', 'severities', 'propertyTypes', 'reporter', 'organization', 'status', 'verifiedBy'])
             ->latest('id');
 
         if (! $request->user()->hasRole('admin', 'api')) {
@@ -86,7 +171,7 @@ class AffectationController extends Controller
     {
         $this->authorize('view', $affectation);
 
-        $affectation->load(['person.municipality', 'needs', 'incidentType', 'severities', 'propertyTypes', 'attachments', 'reporter', 'organization', 'familyMembers.person.attachments']);
+        $affectation->load(['person.municipality', 'needs', 'incidentType', 'severities', 'propertyTypes', 'attachments', 'reporter', 'organization', 'status', 'verifiedBy', 'familyMembers.person.attachments']);
 
         return ApiResponse::success(AffectationResource::make($affectation));
     }
@@ -145,7 +230,7 @@ class AffectationController extends Controller
             ]);
         }
 
-        $affectation->load(['person.municipality', 'needs', 'incidentType', 'severities', 'propertyTypes', 'attachments', 'reporter', 'organization', 'familyMembers.person.attachments']);
+        $affectation->load(['person.municipality', 'needs', 'incidentType', 'severities', 'propertyTypes', 'attachments', 'reporter', 'organization', 'status', 'verifiedBy', 'familyMembers.person.attachments']);
 
         return ApiResponse::success(AffectationResource::make($affectation));
     }

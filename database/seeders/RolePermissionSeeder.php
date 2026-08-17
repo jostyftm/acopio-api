@@ -86,6 +86,13 @@ class RolePermissionSeeder extends Seeder
             'affectations.create',
             'affectations.update',
             'affectations.delete',
+            'affectations.report',
+            'affectations.verify',
+            'coverage-zones.view',
+            'coverage-zones.list',
+            'coverage-zones.create',
+            'coverage-zones.update',
+            'coverage-zones.delete',
         ],
         'org_admin' => [
             'people.view',
@@ -114,6 +121,8 @@ class RolePermissionSeeder extends Seeder
             'affectations.create',
             'affectations.update',
             'affectations.delete',
+            'affectations.report',
+            'affectations.verify',
         ],
         'operator' => [
             'people.view',
@@ -131,6 +140,8 @@ class RolePermissionSeeder extends Seeder
             'affectations.list',
             'affectations.create',
             'affectations.update',
+            'affectations.report',
+            'affectations.verify',
         ],
         'viewer' => [
             'people.view',
@@ -140,6 +151,7 @@ class RolePermissionSeeder extends Seeder
             'dashboard.view',
             'affectations.view',
             'affectations.list',
+            'affectations.report',
         ],
     ];
 
@@ -218,7 +230,7 @@ class RolePermissionSeeder extends Seeder
             'icon' => 'Ambulance',
             'order' => 7,
             'parent' => null,
-            'permissions' => ['affectations.view', 'affectations.list', 'affectations.create', 'affectations.update', 'affectations.delete'],
+            'permissions' => ['affectations.view', 'affectations.list', 'affectations.create', 'affectations.update', 'affectations.delete', 'affectations.report', 'affectations.verify'],
         ],
         'system' => [
             'name' => 'Administración del sistema',
@@ -283,6 +295,14 @@ class RolePermissionSeeder extends Seeder
             'order' => 7,
             'parent' => 'system',
             'permissions' => ['incident-types.view', 'incident-types.list', 'incident-types.create', 'incident-types.update', 'incident-types.delete'],
+        ],
+        'coverage-zones' => [
+            'name' => 'Zonas de cobertura',
+            'path' => '/coverage-zones',
+            'icon' => 'Map',
+            'order' => 8,
+            'parent' => 'system',
+            'permissions' => ['coverage-zones.view', 'coverage-zones.list', 'coverage-zones.create', 'coverage-zones.update', 'coverage-zones.delete'],
         ],
     ];
 

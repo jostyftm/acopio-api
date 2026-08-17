@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\V1\Auth\LogoutController;
 use App\Http\Controllers\Api\V1\Auth\MeController;
 use App\Http\Controllers\Api\V1\Auth\MeModulesController;
 use App\Http\Controllers\Api\V1\Auth\SocialLoginController;
+use App\Http\Controllers\Api\V1\CoverageZone\CoverageZoneController;
 use App\Http\Controllers\Api\V1\Department\DepartmentController;
 use App\Http\Controllers\Api\V1\Facility\FacilityController;
 use App\Http\Controllers\Api\V1\FacilityType\FacilityTypeController;
@@ -94,6 +95,8 @@ Route::name('api.v1.')->group(function (): void {
             ->name('affectations.index');
         Route::post('affectations', [AffectationController::class, 'store'])
             ->name('affectations.store');
+        Route::post('affectations/report', [AffectationController::class, 'storeReport'])
+            ->name('affectations.report');
         Route::get('affectations/{affectation}', [AffectationController::class, 'show'])
             ->name('affectations.show');
         Route::put('affectations/{affectation}', [AffectationController::class, 'update'])
@@ -102,11 +105,17 @@ Route::name('api.v1.')->group(function (): void {
             ->name('affectations.destroy');
         Route::delete('affectations/{affectation}/evidence/{evidence}', [AffectationController::class, 'destroyEvidence'])
             ->name('affectations.evidence.destroy');
+        Route::post('affectations/{affectation}/verify', [AffectationController::class, 'verify'])
+            ->name('affectations.verify');
 
         Route::apiResource('search-reports', SearchReportController::class)->except(['store', 'destroy']);
         Route::apiResource('users', UserController::class);
 
         Route::apiResource('organizations', OrganizationController::class);
+        Route::put('organizations/{organization}/coverage', [OrganizationController::class, 'updateCoverage'])
+            ->name('organizations.coverage');
+
+        Route::apiResource('coverage-zones', CoverageZoneController::class);
 
         Route::apiResource('facilities', FacilityController::class);
 
