@@ -20,6 +20,7 @@ class DatabaseSeeder extends Seeder
         $this->call([
             MunicipalitySeeder::class,
             RolePermissionSeeder::class,
+            AffectationStatusSeeder::class,
             OrganizationTypeSeeder::class,
             FacilityTypeSeeder::class,
             PropertyTypeSeeder::class,

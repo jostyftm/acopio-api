@@ -58,11 +58,11 @@ class StoreRegistrationRequest extends FormRequest
             'last_name' => ['required', 'string', 'max:120'],
 
             /**
-             * Birth date of the affected person.
+             * Birth date of the affected person (optional).
              *
              * @example 1990-05-10
              */
-            'birth_date' => ['required', 'date', 'before_or_equal:today'],
+            'birth_date' => ['nullable', 'date', 'before_or_equal:today'],
 
             /**
              * Contact phone number (optional country code +57).
@@ -177,12 +177,12 @@ class StoreRegistrationRequest extends FormRequest
             'incident_longitude' => ['nullable', 'numeric', 'between:-180,180'],
 
             /**
-             * Identifiers of the needs related to the affectation.
+             * Identifiers of the needs related to the affectation, tied to the incident type.
              *
              * @example [1,2,3]
              */
             'needs' => ['nullable', 'array', 'max:20'],
-            'needs.*' => ['integer', Rule::exists('needs', 'id')],
+            'needs.*' => ['integer', Rule::exists('needs', 'id')->whereIn('id', $this->needsForIncidentType())],
 
             /**
              * Evidence files of the damage (photos or videos).
@@ -193,61 +193,90 @@ class StoreRegistrationRequest extends FormRequest
             'evidence.*' => ['file', 'mimetypes:image/jpeg,image/png,image/webp,image/gif,video/mp4,video/quicktime,video/webm', new EvidenceFile],
 
             /**
-             * Members of the affected person's family group.
+             * Family groups affected by the incident. Each family must contain
+             * exactly one household head. The affected person lives in the
+             * first family group.
              *
              * @example
              */
-            'family_members' => ['nullable', 'array', 'max:20'],
+            'families' => [
+                'nullable',
+                'array',
+                'max:20',
+                function (string $attribute, mixed $value, callable $fail): void {
+                    foreach ($value as $index => $family) {
+                        if (! is_array($family) || empty($family['members'])) {
+                            continue;
+                        }
+
+                        $heads = array_values(array_filter(
+                            $family['members'],
+                            static fn (mixed $member): bool => (bool) ($member['is_householder'] ?? false),
+                        ));
+
+                        if (count($heads) !== 1) {
+                            $fail('Cada familia debe tener exactamente un cabeza de familia.');
+                        }
+                    }
+                },
+            ],
+
+            /**
+             * Members of a family group.
+             *
+             * @example
+             */
+            'families.*.members' => ['required', 'array', 'min:1', 'max:20'],
 
             /**
              * Document type of the family member.
              *
              * @example CC
              */
-            'family_members.*.document_type' => ['required', Rule::in(DocumentType::values())],
+            'families.*.members.*.document_type' => ['required', Rule::in(DocumentType::values())],
 
             /**
              * Document number of the family member.
              *
              * @example 123456789
              */
-            'family_members.*.document_number' => ['required', 'string', 'max:32', 'alpha_num'],
+            'families.*.members.*.document_number' => ['required', 'string', 'max:32', 'alpha_num'],
 
             /**
              * First name of the family member.
              *
              * @example Juan
              */
-            'family_members.*.first_name' => ['required', 'string', 'max:120'],
+            'families.*.members.*.first_name' => ['required', 'string', 'max:120'],
 
             /**
              * Last name of the family member.
              *
              * @example Perez
              */
-            'family_members.*.last_name' => ['required', 'string', 'max:120'],
+            'families.*.members.*.last_name' => ['required', 'string', 'max:120'],
 
             /**
-             * Birth date of the family member.
+             * Birth date of the family member (optional).
              *
              * @example 2010-03-15
              */
-            'family_members.*.birth_date' => ['required', 'date', 'before_or_equal:today'],
+            'families.*.members.*.birth_date' => ['nullable', 'date', 'before_or_equal:today'],
 
             /**
              * Whether the family member is the household head.
              *
              * @example false
              */
-            'family_members.*.is_householder' => ['sometimes', 'boolean'],
+            'families.*.members.*.is_householder' => ['sometimes', 'boolean'],
 
             /**
              * Evidence files of the family member.
              *
              * @example
              */
-            'family_members.*.evidence' => ['nullable', 'array', 'max:'.config('evidence.max_files')],
-            'family_members.*.evidence.*' => ['file', 'mimetypes:image/jpeg,image/png,image/webp,image/gif,video/mp4,video/quicktime,video/webm', new EvidenceFile],
+            'families.*.members.*.evidence' => ['nullable', 'array', 'max:'.config('evidence.max_files')],
+            'families.*.members.*.evidence.*' => ['file', 'mimetypes:image/jpeg,image/png,image/webp,image/gif,video/mp4,video/quicktime,video/webm', new EvidenceFile],
 
             /**
              * Special needs of the person.
@@ -271,5 +300,19 @@ class StoreRegistrationRequest extends FormRequest
              */
             'website' => ['sometimes', 'max:0'],
         ];
+    }
+
+    /**
+     * Needs allowed for the selected incident type.
+     *
+     * @return array<int, int>
+     */
+    private function needsForIncidentType(): array
+    {
+        $type = IncidentType::query()->with('needs')->find($this->integer('incident_type_id'));
+
+        return $type === null
+            ? [0]
+            : $type->needs->pluck('id')->all();
     }
 }

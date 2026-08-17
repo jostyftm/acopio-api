@@ -11,12 +11,14 @@ class FamilyMember extends Model
         'affectation_id',
         'person_id',
         'is_householder',
+        'family_group',
     ];
 
     protected function casts(): array
     {
         return [
             'is_householder' => 'boolean',
+            'family_group' => 'integer',
         ];
     }
 

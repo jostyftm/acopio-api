@@ -4,6 +4,8 @@ namespace App\Services\Registration;
 
 use App\Enums\PersonStatus;
 use App\Enums\RegistrationSource;
+use App\Models\Affectation;
+use App\Models\AffectationStatus;
 use App\Models\Municipality;
 use App\Models\Person;
 use App\Models\User;
@@ -48,7 +50,7 @@ class RegistrationService
         ]);
 
         if ($person->wasRecentlyCreated && isset($data['incident_type_id'])) {
-            $this->createAffectation($person, $data, $reporter);
+            $this->createAffectation($person, $data, $reporter, $markLocated);
         }
 
         return $person->refresh();
@@ -89,16 +91,23 @@ class RegistrationService
     /**
      * @param  array<string, mixed>  $data
      */
-    private function createAffectation(Person $person, array $data, ?User $reporter = null): void
+    private function createAffectation(Person $person, array $data, ?User $reporter = null, bool $markLocated = false): void
     {
         $incidentLatitude = isset($data['incident_latitude']) ? (float) $data['incident_latitude'] : null;
         $incidentLongitude = isset($data['incident_longitude']) ? (float) $data['incident_longitude'] : null;
+
+        $statusId = $this->affectationStatusIdFor($person, $markLocated);
 
         $affectation = $person->affectation()->create([
             'reported_by' => $reporter?->id,
             'organization_id' => $reporter?->organization_id,
             'incident_type_id' => $data['incident_type_id'],
+            'status_id' => $statusId,
+            'verified_by' => $markLocated ? $reporter?->id : null,
+            'verified_at' => $markLocated ? now() : null,
+            'located_at' => $markLocated ? now() : null,
             'description' => $data['description'] ?? null,
+            'address' => $data['address'] ?? null,
             'location' => $this->pointFrom($incidentLatitude, $incidentLongitude),
         ]);
 
@@ -125,42 +134,66 @@ class RegistrationService
             ]);
         }
 
-        foreach ($data['family_members'] ?? [] as $index => $member) {
-            $person = $this->findDuplicate($member['document_type'], $member['document_number']);
+        foreach ($data['families'] ?? [] as $familyIndex => $family) {
+            $familyGroup = $familyIndex + 1;
 
-            if ($person === null) {
-                $person = Person::query()->create([
-                    'document_type' => $member['document_type'],
-                    'document_number' => $member['document_number'],
-                    'first_name' => $member['first_name'],
-                    'last_name' => $member['last_name'],
-                    'birth_date' => $member['birth_date'],
-                    'phone' => null,
-                    'source' => RegistrationSource::Family,
-                    'data_consent' => true,
-                ]);
-                $person->refresh();
-            } elseif ($person->birth_date === null) {
-                $person->update(['birth_date' => $member['birth_date']]);
-                $person->refresh();
-            }
-
-            $affectation->familyMembers()->create([
-                'person_id' => $person->id,
-                'is_householder' => $member['is_householder'] ?? false,
-            ]);
-
-            foreach ($data['family_members'][$index]['evidence'] ?? [] as $file) {
-                $path = $file->store('evidence/family-members/'.$person->id, 's3');
-
-                $person->attachments()->create([
-                    'file_path' => $path,
-                    'original_name' => $file->getClientOriginalName(),
-                    'mime' => $file->getMimeType(),
-                    'size' => $file->getSize(),
-                ]);
+            foreach ($family['members'] as $member) {
+                $this->createFamilyMember($affectation, $member, $familyGroup);
             }
         }
+    }
+
+    /**
+     * @param  array<string, mixed>  $member
+     */
+    private function createFamilyMember(Affectation $affectation, array $member, int $familyGroup): void
+    {
+        $person = $this->findDuplicate($member['document_type'], $member['document_number']);
+
+        if ($person === null) {
+            $person = Person::query()->create([
+                'document_type' => $member['document_type'],
+                'document_number' => $member['document_number'],
+                'first_name' => $member['first_name'],
+                'last_name' => $member['last_name'],
+                'birth_date' => $member['birth_date'] ?? null,
+                'phone' => null,
+                'source' => RegistrationSource::Family,
+                'data_consent' => true,
+            ]);
+            $person->refresh();
+        } elseif ($person->birth_date === null && ! empty($member['birth_date'])) {
+            $person->update(['birth_date' => $member['birth_date']]);
+            $person->refresh();
+        }
+
+        $affectation->familyMembers()->create([
+            'person_id' => $person->id,
+            'family_group' => $familyGroup,
+            'is_householder' => $member['is_householder'] ?? false,
+        ]);
+
+        foreach ($member['evidence'] ?? [] as $file) {
+            $path = $file->store('evidence/family-members/'.$person->id, 's3');
+
+            $person->attachments()->create([
+                'file_path' => $path,
+                'original_name' => $file->getClientOriginalName(),
+                'mime' => $file->getMimeType(),
+                'size' => $file->getSize(),
+            ]);
+        }
+    }
+
+    private function affectationStatusIdFor(Person $person, bool $markLocated): ?int
+    {
+        $code = match (true) {
+            $markLocated => 'located',
+            $person->status === PersonStatus::Verified => 'verified',
+            default => 'reported',
+        };
+
+        return AffectationStatus::query()->where('code', $code)->value('id');
     }
 
     private function pointFrom(?float $latitude, ?float $longitude): ?Point

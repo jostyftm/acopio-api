@@ -136,7 +136,7 @@ it('returns a validation envelope with 422 status', function () {
         ->assertJsonStructure(['errors' => ['document_type', 'first_name']]);
 });
 
-it('requires a birth date for every new person', function () {
+it('registers a person without a birth date', function () {
     $severities = derrumbesSeverities();
 
     $this->postJson('/api/v1/registrations', [
@@ -150,7 +150,10 @@ it('requires a birth date for every new person', function () {
         'incident_type_id' => $severities['incident_type_id'],
         'severities' => [$severities['partial_severity_id']],
         'data_consent' => true,
-    ])->assertUnprocessable()->assertJsonValidationErrors('birth_date');
+    ])->assertCreated()
+        ->assertJsonPath('data.attributes.birth_date', null);
+
+    expect(Person::where('document_number', '123456789')->firstOrFail()->birth_date)->toBeNull();
 });
 
 it('stores the birth date and computes the current age', function () {
