@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1\Facility;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\V1\Facility\StoreFacilityPhotosRequest;
 use App\Http\Requests\Api\V1\Facility\StoreFacilityRequest;
 use App\Http\Requests\Api\V1\Facility\UpdateFacilityRequest;
 use App\Http\Resources\Api\V1\Facility\FacilityResource;
@@ -13,8 +14,6 @@ use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
-use Spatie\QueryBuilder\AllowedFilter;
-use Spatie\QueryBuilder\QueryBuilder;
 
 class FacilityController extends Controller
 {
@@ -35,23 +34,12 @@ class FacilityController extends Controller
     {
         $this->authorize('viewAny', Facility::class);
 
-        $query = QueryBuilder::for(Facility::class)
-            ->with(['organization', 'type', 'municipality'])
-            ->allowedFilters(
-                AllowedFilter::partial('name'),
-                AllowedFilter::exact('status'),
-                AllowedFilter::exact('organization_id'),
-                AllowedFilter::exact('facility_type_id'),
-                AllowedFilter::exact('municipality_id'),
-            )
-            ->defaultSort('name');
-
-        if (! $request->user()->hasRole('admin', 'api')) {
-            $query->where('organization_id', $request->user()->organization_id);
-        }
-
         $facilities = FacilityResource::collection(
-            $query->cursorPaginate($request->integer('per_page', 15)),
+            $this->facilityService->index(
+                $request->user(),
+                $request->only(['name', 'status', 'organization_id', 'facility_type_id', 'municipality_id']),
+                $request->integer('per_page', 15),
+            ),
         );
 
         return ApiResponse::success($facilities);
@@ -69,7 +57,7 @@ class FacilityController extends Controller
         $facility = $this->facilityService->create($request->validated());
 
         return ApiResponse::success(
-            FacilityResource::make($facility->load(['organization', 'type', 'municipality'])),
+            FacilityResource::make($facility),
             null,
             201,
         );
@@ -86,9 +74,9 @@ class FacilityController extends Controller
     {
         $this->authorize('view', $facility);
 
-        return ApiResponse::success(
-            FacilityResource::make($facility->load(['organization', 'type', 'municipality'])),
-        );
+        $facility = $this->facilityService->show($facility);
+
+        return ApiResponse::success(FacilityResource::make($facility));
     }
 
     /**
@@ -103,9 +91,7 @@ class FacilityController extends Controller
 
         $facility = $this->facilityService->update($facility, $request->validated());
 
-        return ApiResponse::success(
-            FacilityResource::make($facility->load(['organization', 'type', 'municipality'])),
-        );
+        return ApiResponse::success(FacilityResource::make($facility));
     }
 
     /**
@@ -120,5 +106,18 @@ class FacilityController extends Controller
         $facility->delete();
 
         return response()->noContent();
+    }
+
+    /**
+     * Sube fotos de evidencia de un centro de acopio o albergue.
+     *
+     * @param  StoreFacilityPhotosRequest  $request  Archivos de imagen.
+     * @param  Facility  $facility  El espacio al que pertenecen las fotos.
+     */
+    public function storePhotos(StoreFacilityPhotosRequest $request, Facility $facility): JsonResponse
+    {
+        $photos = $this->facilityService->uploadPhotos($facility, $request->file('photos', []));
+
+        return ApiResponse::success($photos);
     }
 }

@@ -3,13 +3,42 @@
 namespace App\Services\User;
 
 use App\Models\User;
+use App\Support\Enums\SpatieRole;
+use Illuminate\Contracts\Pagination\CursorPaginator;
 use Illuminate\Support\Facades\Hash;
 use Spatie\Permission\Models\Role;
+use Spatie\QueryBuilder\AllowedFilter;
+use Spatie\QueryBuilder\QueryBuilder;
 
 class UserService
 {
     /**
-     * @param  array<string, mixed>  $data
+     * Build the query for listing users with filters and pagination.
+     *
+     * Admin users see all users; non-admin users see only those
+     * belonging to their organization. Results include the organization
+     * relationship and are sorted by creation date (newest first).
+     *
+     * @param  array{email?: string}  $filters
+     */
+    public function index(User $currentUser, array $filters, int $perPage = 15): CursorPaginator
+    {
+        $query = QueryBuilder::for(User::class)
+            ->with('organization')
+            ->allowedFilters(AllowedFilter::exact('email'))
+            ->defaultSort('-created_at');
+
+        if (! $currentUser->hasRole(SpatieRole::Admin->value, 'api')) {
+            $query->where('organization_id', $currentUser->organization_id);
+        }
+
+        return $query->cursorPaginate($perPage);
+    }
+
+    /**
+     * Create a new user with a role and sync it to the 'api' guard.
+     *
+     * @param  array{name: string, email: string, password: string, role: string, organization_id?: int}  $data
      */
     public function create(array $data): User
     {
@@ -28,6 +57,8 @@ class UserService
     }
 
     /**
+     * Update an existing user's data, optionally changing their role.
+     *
      * @param  array<string, mixed>  $data
      */
     public function update(User $user, array $data): User
@@ -54,10 +85,9 @@ class UserService
     }
 
     /**
-     * Actualiza el perfil del propio usuario.
+     * Update the current user's own profile (name and email only).
      *
-     * Solo permite modificar nombre y correo, sin tocar roles,
-     * organización ni estado.
+     * Does not allow changing roles, organization, or active status.
      *
      * @param  array{name: string, email: string}  $data
      */

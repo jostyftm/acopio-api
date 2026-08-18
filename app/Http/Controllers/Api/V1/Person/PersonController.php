@@ -78,10 +78,16 @@ class PersonController extends Controller
             'verifiedBy',
             'searchReports',
             'municipality',
+            'affectation.needs.severityNeed',
             'affectation.incidentType',
-            'affectation.needs',
             'affectation.severities',
+            'affectation.propertyTypes',
             'affectation.attachments',
+            'affectation.reporter',
+            'affectation.organization',
+            'affectation.status',
+            'affectation.verifiedBy',
+            'affectation.familyMembers.person.municipality',
             'affectation.familyMembers.person.attachments',
         ]);
 
@@ -101,10 +107,16 @@ class PersonController extends Controller
         $person = $this->personService->update($person, $request->validated());
         $person->load([
             'municipality',
+            'affectation.needs.severityNeed',
             'affectation.incidentType',
-            'affectation.needs',
             'affectation.severities',
+            'affectation.propertyTypes',
             'affectation.attachments',
+            'affectation.reporter',
+            'affectation.organization',
+            'affectation.status',
+            'affectation.verifiedBy',
+            'affectation.familyMembers.person.municipality',
             'affectation.familyMembers.person.attachments',
         ]);
 
@@ -134,10 +146,16 @@ class PersonController extends Controller
         return ApiResponse::success(PersonResource::make($person->load([
             'verifiedBy',
             'municipality',
+            'affectation.needs.severityNeed',
             'affectation.incidentType',
-            'affectation.needs',
             'affectation.severities',
+            'affectation.propertyTypes',
             'affectation.attachments',
+            'affectation.reporter',
+            'affectation.organization',
+            'affectation.status',
+            'affectation.verifiedBy',
+            'affectation.familyMembers.person.municipality',
             'affectation.familyMembers.person.attachments',
         ])));
     }

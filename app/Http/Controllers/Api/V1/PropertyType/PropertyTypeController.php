@@ -2,12 +2,12 @@
 
 namespace App\Http\Controllers\Api\V1\PropertyType;
 
-use App\Exceptions\ApiException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\PropertyType\StorePropertyTypeRequest;
 use App\Http\Requests\Api\V1\PropertyType\UpdatePropertyTypeRequest;
 use App\Http\Resources\Api\V1\PropertyType\PropertyTypeResource;
 use App\Models\PropertyType;
+use App\Services\PropertyType\PropertyTypeService;
 use App\Support\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -15,6 +15,10 @@ use Illuminate\Http\Response;
 
 class PropertyTypeController extends Controller
 {
+    public function __construct(
+        private readonly PropertyTypeService $service,
+    ) {}
+
     /**
      * Lista los tipos de predio (vivienda, negocio, hospital, etc.).
      *
@@ -22,13 +26,9 @@ class PropertyTypeController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $query = PropertyType::query()->orderBy('display_name');
+        $types = $this->service->index($request->boolean('include_inactive'));
 
-        if (! $request->boolean('include_inactive')) {
-            $query->where('is_active', true);
-        }
-
-        return ApiResponse::success(PropertyTypeResource::collection($query->get()));
+        return ApiResponse::success(PropertyTypeResource::collection($types));
     }
 
     /**
@@ -38,7 +38,7 @@ class PropertyTypeController extends Controller
      */
     public function store(StorePropertyTypeRequest $request): JsonResponse
     {
-        $type = PropertyType::query()->create($request->validated());
+        $type = $this->service->create($request->validated());
 
         return ApiResponse::success(PropertyTypeResource::make($type), null, 201);
     }
@@ -51,9 +51,9 @@ class PropertyTypeController extends Controller
      */
     public function update(UpdatePropertyTypeRequest $request, PropertyType $propertyType): JsonResponse
     {
-        $propertyType->update($request->validated());
+        $type = $this->service->update($propertyType, $request->validated());
 
-        return ApiResponse::success(PropertyTypeResource::make($propertyType));
+        return ApiResponse::success(PropertyTypeResource::make($type));
     }
 
     /**
@@ -63,11 +63,7 @@ class PropertyTypeController extends Controller
      */
     public function destroy(PropertyType $propertyType): Response
     {
-        if ($propertyType->affectations()->exists()) {
-            throw new ApiException('No se puede eliminar un tipo que tiene afectaciones asignadas.', 409);
-        }
-
-        $propertyType->delete();
+        $this->service->delete($propertyType);
 
         return response()->noContent();
     }

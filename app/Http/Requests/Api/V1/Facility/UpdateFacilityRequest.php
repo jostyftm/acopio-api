@@ -46,13 +46,14 @@ class UpdateFacilityRequest extends FormRequest
             'facility_type_id' => ['sometimes', 'integer', 'exists:facility_types,id', Rule::exists('facility_types', 'id')->where('is_active', true)],
             'name' => ['sometimes', 'string', 'max:240'],
             'municipality_id' => ['sometimes', 'nullable', 'integer', 'exists:municipalities,id'],
-            'address' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'address' => ['sometimes', 'required', 'string', 'max:255'],
             'latitude' => ['sometimes', 'nullable', 'numeric', 'between:-90,90'],
             'longitude' => ['sometimes', 'nullable', 'numeric', 'between:-180,180'],
             'capacity' => ['sometimes', 'nullable', 'integer', 'min:0'],
             'available' => ['sometimes', 'nullable', 'integer', 'min:0'],
             'description' => ['sometimes', 'nullable', 'string'],
             'status' => ['sometimes', Rule::enum(FacilityStatus::class)],
+            'contact_phone' => ['sometimes', 'required', 'string', 'max:40'],
         ];
     }
 }

@@ -7,6 +7,7 @@ use Database\Factories\FacilityFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 class Facility extends Model
 {
@@ -25,6 +26,7 @@ class Facility extends Model
         'available',
         'description',
         'status',
+        'contact_phone',
     ];
 
     protected function casts(): array
@@ -51,5 +53,10 @@ class Facility extends Model
     public function municipality(): BelongsTo
     {
         return $this->belongsTo(Municipality::class);
+    }
+
+    public function photos(): MorphMany
+    {
+        return $this->morphMany(Attachment::class, 'attachable');
     }
 }

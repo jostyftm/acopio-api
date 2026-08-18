@@ -114,10 +114,14 @@ Route::name('api.v1.')->group(function (): void {
         Route::apiResource('organizations', OrganizationController::class);
         Route::put('organizations/{organization}/coverage', [OrganizationController::class, 'updateCoverage'])
             ->name('organizations.coverage');
+        Route::post('organizations/{organization}/user', [OrganizationController::class, 'storeUser'])
+            ->name('organizations.storeUser');
 
         Route::apiResource('coverage-zones', CoverageZoneController::class);
 
         Route::apiResource('facilities', FacilityController::class);
+        Route::post('facilities/{facility}/photos', [FacilityController::class, 'storePhotos'])
+            ->name('facilities.storePhotos');
 
         Route::apiResource('organization-types', OrganizationTypeController::class)->except(['index']);
         Route::apiResource('facility-types', FacilityTypeController::class)->except(['index']);

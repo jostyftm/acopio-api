@@ -4,9 +4,11 @@ namespace App\Http\Controllers\Api\V1\Organization;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\Organization\StoreOrganizationRequest;
+use App\Http\Requests\Api\V1\Organization\StoreOrganizationUserRequest;
 use App\Http\Requests\Api\V1\Organization\UpdateOrganizationCoverageRequest;
 use App\Http\Requests\Api\V1\Organization\UpdateOrganizationRequest;
 use App\Http\Resources\Api\V1\Organization\OrganizationResource;
+use App\Http\Resources\Api\V1\User\UserResource;
 use App\Models\Organization;
 use App\Services\Organization\OrganizationService;
 use App\Support\ApiResponse;
@@ -130,5 +132,20 @@ class OrganizationController extends Controller
         $organization->delete();
 
         return response()->noContent();
+    }
+
+    /**
+     * Crea un usuario dentro de una organización.
+     *
+     * Registra un usuario con rol "operator" en la organización especificada.
+     *
+     * @param  StoreOrganizationUserRequest  $request  Datos del usuario.
+     * @param  Organization  $organization  La organización a la que pertenece el usuario.
+     */
+    public function storeUser(Organization $organization, StoreOrganizationUserRequest $request): JsonResponse
+    {
+        $user = $this->organizationService->createUser($organization, $request->validated());
+
+        return ApiResponse::success(UserResource::make($user->load('organization')), null, 201);
     }
 }

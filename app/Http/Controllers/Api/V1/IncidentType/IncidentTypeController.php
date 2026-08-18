@@ -2,12 +2,12 @@
 
 namespace App\Http\Controllers\Api\V1\IncidentType;
 
-use App\Exceptions\ApiException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\IncidentType\StoreIncidentTypeRequest;
 use App\Http\Requests\Api\V1\IncidentType\UpdateIncidentTypeRequest;
 use App\Http\Resources\Api\V1\IncidentType\IncidentTypeResource;
 use App\Models\IncidentType;
+use App\Services\IncidentType\IncidentTypeService;
 use App\Support\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -15,6 +15,10 @@ use Illuminate\Http\Response;
 
 class IncidentTypeController extends Controller
 {
+    public function __construct(
+        private readonly IncidentTypeService $service,
+    ) {}
+
     /**
      * Lista los tipos de incidente (derrumbes, incendios, etc.) con sus gravedades.
      *
@@ -22,13 +26,9 @@ class IncidentTypeController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $query = IncidentType::query()->with('severities', 'needs')->orderBy('display_name');
+        $types = $this->service->index($request->boolean('include_inactive'));
 
-        if (! $request->boolean('include_inactive')) {
-            $query->where('is_active', true);
-        }
-
-        return ApiResponse::success(IncidentTypeResource::collection($query->get()));
+        return ApiResponse::success(IncidentTypeResource::collection($types));
     }
 
     /**
@@ -38,13 +38,9 @@ class IncidentTypeController extends Controller
      */
     public function store(StoreIncidentTypeRequest $request): JsonResponse
     {
-        $type = IncidentType::query()->create($request->safe()->except('needs'));
+        $type = $this->service->create($request->validated());
 
-        if ($request->has('needs')) {
-            $type->needs()->sync($request->input('needs', []));
-        }
-
-        return ApiResponse::success(IncidentTypeResource::make($type->load('severities', 'needs')), null, 201);
+        return ApiResponse::success(IncidentTypeResource::make($type), null, 201);
     }
 
     /**
@@ -54,7 +50,9 @@ class IncidentTypeController extends Controller
      */
     public function show(IncidentType $incidentType): JsonResponse
     {
-        return ApiResponse::success(IncidentTypeResource::make($incidentType->load('severities', 'needs')));
+        $incidentType = $this->service->loadRelations($incidentType);
+
+        return ApiResponse::success(IncidentTypeResource::make($incidentType));
     }
 
     /**
@@ -65,13 +63,9 @@ class IncidentTypeController extends Controller
      */
     public function update(UpdateIncidentTypeRequest $request, IncidentType $incidentType): JsonResponse
     {
-        $incidentType->update($request->safe()->except('needs'));
+        $type = $this->service->update($incidentType, $request->validated());
 
-        if ($request->has('needs')) {
-            $incidentType->needs()->sync($request->input('needs', []));
-        }
-
-        return ApiResponse::success(IncidentTypeResource::make($incidentType->load('severities', 'needs')));
+        return ApiResponse::success(IncidentTypeResource::make($type));
     }
 
     /**
@@ -81,11 +75,7 @@ class IncidentTypeController extends Controller
      */
     public function destroy(IncidentType $incidentType): Response
     {
-        if ($incidentType->affectations()->exists()) {
-            throw new ApiException('No se puede eliminar un tipo que tiene afectaciones asignadas.', 409);
-        }
-
-        $incidentType->delete();
+        $this->service->delete($incidentType);
 
         return response()->noContent();
     }

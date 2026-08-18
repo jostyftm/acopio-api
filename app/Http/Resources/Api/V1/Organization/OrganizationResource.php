@@ -39,7 +39,11 @@ class OrganizationResource extends JsonResource
                     'id' => $zone->id,
                     'name' => $zone->name,
                     'municipality_id' => $zone->municipality_id,
-                    'municipality' => $zone->municipality?->name,
+                    'municipality' => $zone->municipality ? [
+                        'id' => $zone->municipality->id,
+                        'code' => $zone->municipality->code,
+                        'name' => $zone->municipality->name,
+                    ] : null,
                 ])),
                 'user_count' => $this->whenCounted('users'),
                 'created_at' => $this->created_at,

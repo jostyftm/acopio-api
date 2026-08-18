@@ -26,6 +26,7 @@ class FacilityResource extends JsonResource
                 'available' => $this->available,
                 'description' => $this->description,
                 'status' => $this->status->value,
+                'contact_phone' => $this->contact_phone,
                 'organization' => $this->whenLoaded('organization', fn () => [
                     'id' => $this->organization->id,
                     'name' => $this->organization->name,
@@ -40,6 +41,12 @@ class FacilityResource extends JsonResource
                     'code' => $this->municipality->code,
                     'name' => $this->municipality->name,
                 ]),
+                'photos' => $this->whenLoaded('photos', fn () => $this->photos->map(fn ($photo) => [
+                    'id' => $photo->id,
+                    'url' => $photo->url,
+                    'original_name' => $photo->original_name,
+                    'mime' => $photo->mime,
+                ])),
                 'created_at' => $this->created_at,
                 'updated_at' => $this->updated_at,
             ],

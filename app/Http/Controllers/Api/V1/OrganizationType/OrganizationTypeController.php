@@ -2,12 +2,12 @@
 
 namespace App\Http\Controllers\Api\V1\OrganizationType;
 
-use App\Exceptions\ApiException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\OrganizationType\StoreOrganizationTypeRequest;
 use App\Http\Requests\Api\V1\OrganizationType\UpdateOrganizationTypeRequest;
 use App\Http\Resources\Api\V1\OrganizationType\OrganizationTypeResource;
 use App\Models\OrganizationType;
+use App\Services\OrganizationType\OrganizationTypeService;
 use App\Support\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -15,6 +15,10 @@ use Illuminate\Http\Response;
 
 class OrganizationTypeController extends Controller
 {
+    public function __construct(
+        private readonly OrganizationTypeService $service,
+    ) {}
+
     /**
      * Lista los tipos de organización.
      *
@@ -22,13 +26,9 @@ class OrganizationTypeController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $query = OrganizationType::query()->orderBy('display_name');
+        $types = $this->service->index($request->boolean('include_inactive'));
 
-        if (! $request->boolean('include_inactive')) {
-            $query->where('is_active', true);
-        }
-
-        return ApiResponse::success(OrganizationTypeResource::collection($query->get()));
+        return ApiResponse::success(OrganizationTypeResource::collection($types));
     }
 
     /**
@@ -38,7 +38,7 @@ class OrganizationTypeController extends Controller
      */
     public function store(StoreOrganizationTypeRequest $request): JsonResponse
     {
-        $type = OrganizationType::query()->create($request->validated());
+        $type = $this->service->create($request->validated());
 
         return ApiResponse::success(OrganizationTypeResource::make($type), null, 201);
     }
@@ -51,7 +51,7 @@ class OrganizationTypeController extends Controller
      */
     public function update(UpdateOrganizationTypeRequest $request, OrganizationType $type): JsonResponse
     {
-        $type->update($request->validated());
+        $type = $this->service->update($type, $request->validated());
 
         return ApiResponse::success(OrganizationTypeResource::make($type));
     }
@@ -63,11 +63,7 @@ class OrganizationTypeController extends Controller
      */
     public function destroy(OrganizationType $type): Response
     {
-        if ($type->organizations()->exists()) {
-            throw new ApiException('No se puede eliminar un tipo que tiene organizaciones asignadas.', 409);
-        }
-
-        $type->delete();
+        $this->service->delete($type);
 
         return response()->noContent();
     }

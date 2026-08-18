@@ -13,7 +13,6 @@ use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
-use Spatie\QueryBuilder\QueryBuilder;
 
 class UserController extends Controller
 {
@@ -35,16 +34,13 @@ class UserController extends Controller
     {
         $this->authorize('viewAny', User::class);
 
-        $query = QueryBuilder::for(User::class)
-            ->with('organization')
-            ->allowedFilters('email')
-            ->defaultSort('-created_at');
-
-        if (! $request->user()->hasRole('admin', 'api')) {
-            $query->where('organization_id', $request->user()->organization_id);
-        }
-
-        $users = UserResource::collection($query->cursorPaginate($request->integer('per_page', 15)));
+        $users = UserResource::collection(
+            $this->userService->index(
+                $request->user(),
+                $request->only(['email']),
+                $request->integer('per_page', 15),
+            ),
+        );
 
         return ApiResponse::success($users);
     }

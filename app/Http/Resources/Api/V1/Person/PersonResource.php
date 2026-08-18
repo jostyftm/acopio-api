@@ -2,8 +2,8 @@
 
 namespace App\Http\Resources\Api\V1\Person;
 
+use App\Http\Resources\Api\V1\Affectation\AffectationResource;
 use App\Http\Resources\Api\V1\SearchReport\SearchReportResource;
-use App\Models\FamilyMember;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Str;
@@ -65,59 +65,7 @@ class PersonResource extends JsonResource
         return [
             'verified_by' => $this->whenLoaded('verifiedBy', fn (): ?array => $this->verifiedBy?->only(['id', 'name'])),
             'search_reports' => $this->whenLoaded('searchReports', fn () => SearchReportResource::collection($this->searchReports)),
-            'affectation' => $this->whenLoaded('affectation', fn (): ?array => $this->affectation === null
-                ? null
-                : [
-                    'id' => $this->affectation->id,
-                    'incident_type' => $this->affectation->incidentType === null ? null : [
-                        'id' => $this->affectation->incidentType->id,
-                        'code' => $this->affectation->incidentType->code,
-                        'display_name' => $this->affectation->incidentType->display_name,
-                    ],
-                    'severities' => $this->affectation->severities->map(
-                        fn ($severity): array => [
-                            'id' => $severity->id,
-                            'code' => $severity->code,
-                            'display_name' => $severity->display_name,
-                        ],
-                    )->values(),
-                    'description' => $this->affectation->description,
-                    'latitude' => $this->affectation->latitude,
-                    'longitude' => $this->affectation->longitude,
-                    'needs' => $this->affectation->needs->map(
-                        fn ($need): array => ['id' => $need->id, 'name' => $need->name],
-                    )->values(),
-                    'evidence' => $this->affectation->attachments->map(
-                        fn ($file): array => [
-                            'id' => $file->id,
-                            'url' => $file->url,
-                            'original_name' => $file->original_name,
-                            'mime' => $file->mime,
-                        ],
-                    )->values(),
-                    'family_members' => $this->affectation->familyMembers->map(
-                        fn (FamilyMember $member): array => [
-                            'id' => $member->id,
-                            'is_householder' => $member->is_householder,
-                            'person' => $member->person === null ? null : [
-                                'id' => $member->person->id,
-                                'document_type' => $member->person->document_type?->value,
-                                'document_number' => $member->person->document_number,
-                                'full_name' => $member->person->full_name,
-                                'birth_date' => $member->person->birth_date?->format('Y-m-d'),
-                                'current_age' => $member->person->current_age,
-                                'evidence' => $member->person->attachments->map(
-                                    fn ($file): array => [
-                                        'id' => $file->id,
-                                        'url' => $file->url,
-                                        'original_name' => $file->original_name,
-                                        'mime' => $file->mime,
-                                    ],
-                                )->values(),
-                            ],
-                        ],
-                    )->values(),
-                ]),
+            'affectation' => $this->whenLoaded('affectation', fn () => AffectationResource::make($this->affectation)),
         ];
     }
 

@@ -2,12 +2,12 @@
 
 namespace App\Http\Controllers\Api\V1\FacilityType;
 
-use App\Exceptions\ApiException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\FacilityType\StoreFacilityTypeRequest;
 use App\Http\Requests\Api\V1\FacilityType\UpdateFacilityTypeRequest;
 use App\Http\Resources\Api\V1\FacilityType\FacilityTypeResource;
 use App\Models\FacilityType;
+use App\Services\FacilityType\FacilityTypeService;
 use App\Support\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -15,6 +15,10 @@ use Illuminate\Http\Response;
 
 class FacilityTypeController extends Controller
 {
+    public function __construct(
+        private readonly FacilityTypeService $service,
+    ) {}
+
     /**
      * Lista los tipos de espacio (acopio, albergue, etc.).
      *
@@ -22,13 +26,9 @@ class FacilityTypeController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $query = FacilityType::query()->orderBy('display_name');
+        $types = $this->service->index($request->boolean('include_inactive'));
 
-        if (! $request->boolean('include_inactive')) {
-            $query->where('is_active', true);
-        }
-
-        return ApiResponse::success(FacilityTypeResource::collection($query->get()));
+        return ApiResponse::success(FacilityTypeResource::collection($types));
     }
 
     /**
@@ -38,7 +38,7 @@ class FacilityTypeController extends Controller
      */
     public function store(StoreFacilityTypeRequest $request): JsonResponse
     {
-        $type = FacilityType::query()->create($request->validated());
+        $type = $this->service->create($request->validated());
 
         return ApiResponse::success(FacilityTypeResource::make($type), null, 201);
     }
@@ -51,7 +51,7 @@ class FacilityTypeController extends Controller
      */
     public function update(UpdateFacilityTypeRequest $request, FacilityType $type): JsonResponse
     {
-        $type->update($request->validated());
+        $type = $this->service->update($type, $request->validated());
 
         return ApiResponse::success(FacilityTypeResource::make($type));
     }
@@ -63,11 +63,7 @@ class FacilityTypeController extends Controller
      */
     public function destroy(FacilityType $type): Response
     {
-        if ($type->facilities()->exists()) {
-            throw new ApiException('No se puede eliminar un tipo que tiene espacios asignados.', 409);
-        }
-
-        $type->delete();
+        $this->service->delete($type);
 
         return response()->noContent();
     }

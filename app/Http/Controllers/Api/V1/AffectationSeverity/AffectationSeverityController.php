@@ -2,18 +2,22 @@
 
 namespace App\Http\Controllers\Api\V1\AffectationSeverity;
 
-use App\Exceptions\ApiException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\AffectationSeverity\StoreAffectationSeverityRequest;
 use App\Http\Requests\Api\V1\AffectationSeverity\UpdateAffectationSeverityRequest;
 use App\Http\Resources\Api\V1\AffectationSeverity\AffectationSeverityResource;
 use App\Models\AffectationSeverity;
+use App\Services\AffectationSeverity\AffectationSeverityService;
 use App\Support\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Response;
 
 class AffectationSeverityController extends Controller
 {
+    public function __construct(
+        private readonly AffectationSeverityService $service,
+    ) {}
+
     /**
      * Crea una gravedad para un tipo de incidente.
      *
@@ -21,7 +25,7 @@ class AffectationSeverityController extends Controller
      */
     public function store(StoreAffectationSeverityRequest $request): JsonResponse
     {
-        $severity = AffectationSeverity::query()->create($request->validated());
+        $severity = $this->service->create($request->validated());
 
         return ApiResponse::success(AffectationSeverityResource::make($severity), null, 201);
     }
@@ -44,9 +48,9 @@ class AffectationSeverityController extends Controller
      */
     public function update(UpdateAffectationSeverityRequest $request, AffectationSeverity $affectationSeverity): JsonResponse
     {
-        $affectationSeverity->update($request->validated());
+        $severity = $this->service->update($affectationSeverity, $request->validated());
 
-        return ApiResponse::success(AffectationSeverityResource::make($affectationSeverity->load('incidentType')));
+        return ApiResponse::success(AffectationSeverityResource::make($severity));
     }
 
     /**
@@ -56,11 +60,7 @@ class AffectationSeverityController extends Controller
      */
     public function destroy(AffectationSeverity $affectationSeverity): Response
     {
-        if ($affectationSeverity->affectations()->exists()) {
-            throw new ApiException('No se puede eliminar una gravedad que tiene afectaciones asignadas.', 409);
-        }
-
-        $affectationSeverity->delete();
+        $this->service->delete($affectationSeverity);
 
         return response()->noContent();
     }

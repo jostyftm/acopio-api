@@ -6,14 +6,12 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\SearchReport\StoreSearchReportRequest;
 use App\Http\Requests\Api\V1\SearchReport\UpdateSearchReportRequest;
 use App\Http\Resources\Api\V1\SearchReport\SearchReportResource;
-use App\Models\Person;
 use App\Models\SearchReport;
 use App\Services\SearchReport\SearchReportService;
 use App\Support\ApiResponse;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Spatie\QueryBuilder\QueryBuilder;
 
 class SearchReportController extends Controller
 {
@@ -36,11 +34,10 @@ class SearchReportController extends Controller
         $this->authorize('viewAny', SearchReport::class);
 
         $reports = SearchReportResource::collection(
-            QueryBuilder::for(SearchReport::class)
-                ->with(['person', 'handledBy'])
-                ->allowedFilters('status', 'municipality', 'document_number')
-                ->defaultSort('-created_at')
-                ->cursorPaginate($request->integer('per_page', 15)),
+            $this->searchReportService->index(
+                $request->only(['status', 'municipality', 'document_number']),
+                $request->integer('per_page', 15),
+            ),
         );
 
         return ApiResponse::success($reports);
@@ -78,7 +75,7 @@ class SearchReportController extends Controller
     {
         $this->authorize('view', $searchReport);
 
-        $searchReport->load(['person', 'handledBy']);
+        $searchReport = $this->searchReportService->show($searchReport);
 
         return ApiResponse::success(SearchReportResource::make($searchReport));
     }
@@ -95,17 +92,12 @@ class SearchReportController extends Controller
      */
     public function update(UpdateSearchReportRequest $request, SearchReport $searchReport): JsonResponse
     {
-        if ($request->input('status') === 'found') {
-            $person = $request->input('person_id')
-                ? Person::find($request->input('person_id'))
-                : null;
+        $searchReport = $this->searchReportService->update(
+            $searchReport,
+            $request->validated(),
+            $request->user(),
+        );
 
-            $searchReport = $this->searchReportService->markFound($searchReport, $person, $request->user());
-        } else {
-            $searchReport->update($request->validated());
-            $searchReport = $searchReport->fresh();
-        }
-
-        return ApiResponse::success(SearchReportResource::make($searchReport->load(['person', 'handledBy'])));
+        return ApiResponse::success(SearchReportResource::make($searchReport));
     }
 }

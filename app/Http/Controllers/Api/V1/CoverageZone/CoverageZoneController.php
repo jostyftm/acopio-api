@@ -7,15 +7,18 @@ use App\Http\Requests\Api\V1\CoverageZone\StoreCoverageZoneRequest;
 use App\Http\Requests\Api\V1\CoverageZone\UpdateCoverageZoneRequest;
 use App\Http\Resources\Api\V1\CoverageZone\CoverageZoneResource;
 use App\Models\CoverageZone;
+use App\Services\CoverageZone\CoverageZoneService;
 use App\Support\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
-use Spatie\QueryBuilder\AllowedFilter;
-use Spatie\QueryBuilder\QueryBuilder;
 
 class CoverageZoneController extends Controller
 {
+    public function __construct(
+        private readonly CoverageZoneService $service,
+    ) {}
+
     /**
      * Lista las zonas de cobertura de forma paginada.
      *
@@ -26,15 +29,10 @@ class CoverageZoneController extends Controller
         $this->authorize('viewAny', CoverageZone::class);
 
         $zones = CoverageZoneResource::collection(
-            QueryBuilder::for(CoverageZone::class)
-                ->with(['municipality.department', 'organizations'])
-                ->allowedFilters(
-                    AllowedFilter::partial('name'),
-                    AllowedFilter::exact('municipality_id'),
-                    AllowedFilter::exact('organization_id', 'organizations.id'),
-                )
-                ->defaultSort('name')
-                ->cursorPaginate($request->integer('per_page', 15)),
+            $this->service->index(
+                $request->only(['name', 'municipality_id', 'organization_id']),
+                $request->integer('per_page', 15),
+            ),
         );
 
         return ApiResponse::success($zones);
@@ -47,12 +45,10 @@ class CoverageZoneController extends Controller
     {
         $this->authorize('create', CoverageZone::class);
 
-        $zone = CoverageZone::query()->create(
-            $this->normalizePolygon($request->validated()),
-        );
+        $zone = $this->service->create($request->validated());
 
         return ApiResponse::success(
-            CoverageZoneResource::make($zone->load('municipality.department')),
+            CoverageZoneResource::make($zone),
             null,
             201,
         );
@@ -65,40 +61,11 @@ class CoverageZoneController extends Controller
     {
         $this->authorize('update', $coverageZone);
 
-        $coverageZone->update(
-            $this->normalizePolygon($request->validated()),
-        );
+        $zone = $this->service->update($coverageZone, $request->validated());
 
         return ApiResponse::success(
-            CoverageZoneResource::make($coverageZone->load('municipality.department')),
+            CoverageZoneResource::make($zone),
         );
-    }
-
-    /**
-     * Convierte el polígono recibido como array de [lon, lat] a WKT cerrado.
-     *
-     * @param  array<string, mixed>  $data
-     * @return array<string, mixed>
-     */
-    private function normalizePolygon(array $data): array
-    {
-        if (! isset($data['polygon']) || ! is_array($data['polygon'])) {
-            return $data;
-        }
-
-        $points = array_map(
-            fn (array $point): string => sprintf('%s %s', $point[0], $point[1]),
-            $data['polygon'],
-        );
-
-        // Cierra el anillo repitiendo el primer punto.
-        if (count($points) > 0) {
-            $points[] = $points[0];
-        }
-
-        $data['polygon'] = 'POLYGON(('.implode(', ', $points).'))';
-
-        return $data;
     }
 
     /**

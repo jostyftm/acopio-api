@@ -40,13 +40,14 @@ class StoreFacilityRequest extends FormRequest
             'facility_type_id' => ['required', 'integer', 'exists:facility_types,id', Rule::exists('facility_types', 'id')->where('is_active', true)],
             'name' => ['required', 'string', 'max:240'],
             'municipality_id' => ['nullable', 'integer', 'exists:municipalities,id'],
-            'address' => ['nullable', 'string', 'max:255'],
+            'address' => ['required', 'string', 'max:255'],
             'latitude' => ['nullable', 'numeric', 'between:-90,90'],
             'longitude' => ['nullable', 'numeric', 'between:-180,180'],
             'capacity' => ['nullable', 'integer', 'min:0'],
             'available' => ['nullable', 'integer', 'min:0'],
             'description' => ['nullable', 'string'],
             'status' => ['required', Rule::enum(FacilityStatus::class)],
+            'contact_phone' => ['required', 'string', 'max:40'],
         ];
     }
 }
