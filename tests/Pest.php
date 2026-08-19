@@ -4,9 +4,25 @@ use App\Models\Affectation;
 use App\Models\AffectationSeverity;
 use App\Models\IncidentType;
 use App\Models\Person;
+use App\Models\PropertyType;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\PermissionRegistrar;
 use Tests\TestCase;
+
+/*
+|--------------------------------------------------------------------------
+| Base de datos de pruebas
+|--------------------------------------------------------------------------
+|
+| El contenedor define DB_DATABASE=acopio como variable de entorno. PHPUnit
+| solo sobreescribe putenv() y $_ENV (no $_SERVER), y Laravel resuelve las
+| variables de entorno leyendo $_SERVER primero. Se fuerza la base de datos
+| de pruebas en los tres orígenes antes de arrancar la aplicación.
+*/
+
+$_SERVER['DB_DATABASE'] = 'testing';
+$_ENV['DB_DATABASE'] = 'testing';
+putenv('DB_DATABASE=testing');
 
 /*
 |--------------------------------------------------------------------------
@@ -103,6 +119,12 @@ function makeAffectation(array $attributes = []): Affectation
         ...$attributes,
     ]);
     $affectation->severities()->attach($severities['partial_severity_id']);
+
+    $propertyType = PropertyType::query()->firstOrCreate(
+        ['code' => 'vivienda'],
+        ['display_name' => 'Vivienda'],
+    );
+    $affectation->propertyTypes()->attach($propertyType->id);
 
     return $affectation;
 }
