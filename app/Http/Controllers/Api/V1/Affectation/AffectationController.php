@@ -5,12 +5,17 @@ namespace App\Http\Controllers\Api\V1\Affectation;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\Affectation\StoreAffectationReportRequest;
 use App\Http\Requests\Api\V1\Affectation\StoreAffectationRequest;
+use App\Http\Requests\Api\V1\Affectation\StoreCasualtyRequest;
+use App\Http\Requests\Api\V1\Affectation\StoreFamilyMemberRequest;
 use App\Http\Requests\Api\V1\Affectation\UpdateAffectationRequest;
+use App\Http\Requests\Api\V1\Affectation\UpdateFamilyMemberRequest;
 use App\Http\Requests\Api\V1\Affectation\VerifyAffectationRequest;
 use App\Http\Resources\Api\V1\Affectation\AffectationResource;
+use App\Http\Resources\Api\V1\FamilyMember\FamilyMemberResource;
 use App\Http\Resources\Api\V1\Person\PersonResource;
 use App\Models\Affectation;
 use App\Models\Attachment;
+use App\Models\FamilyMember;
 use App\Services\Affectation\AffectationReportService;
 use App\Services\Affectation\AffectationService;
 use App\Services\Registration\RegistrationService;
@@ -184,5 +189,106 @@ class AffectationController extends Controller
         $this->affectationService->destroyEvidence($affectation, $evidence);
 
         return ApiResponse::success(['deleted' => true]);
+    }
+
+    /**
+     * Agrega un miembro familiar a una afectación.
+     *
+     * Crea o reutiliza la persona asociada y la vincula como miembro
+     * del grupo familiar. Requiere permiso de actualización.
+     */
+    public function storeFamilyMember(StoreFamilyMemberRequest $request, Affectation $affectation): JsonResponse
+    {
+        $this->authorize('update', $affectation);
+
+        $data = $request->validated();
+        $familyMember = $this->affectationService->addFamilyMember($affectation, $data, $request->file('evidence', []));
+
+        return ApiResponse::success(FamilyMemberResource::make($familyMember->load('person')), [], 201);
+    }
+
+    /**
+     * Actualiza un miembro familiar de una afectación.
+     *
+     * Permite modificar los datos de la persona asociada, el grupo familiar
+     * y si es jefe de hogar. Requiere permiso de actualización.
+     */
+    public function updateFamilyMember(
+        UpdateFamilyMemberRequest $request,
+        Affectation $affectation,
+        FamilyMember $familyMember,
+    ): JsonResponse {
+        $this->authorize('update', $affectation);
+
+        abort_if(
+            $familyMember->affectation_id !== $affectation->id,
+            404,
+        );
+
+        $familyMember = $this->affectationService->updateFamilyMember(
+            $affectation,
+            $familyMember,
+            $request->validated(),
+            $request->file('evidence', []),
+        );
+
+        return ApiResponse::success(FamilyMemberResource::make($familyMember->load('person')));
+    }
+
+    /**
+     * Elimina un miembro familiar de una afectación.
+     *
+     * Desvincula a la persona del grupo familiar. La persona permanece
+     * en el sistema. Requiere permiso de actualización.
+     */
+    public function destroyFamilyMember(Affectation $affectation, FamilyMember $familyMember): Response
+    {
+        $this->authorize('update', $affectation);
+
+        abort_if(
+            $familyMember->affectation_id !== $affectation->id,
+            404,
+        );
+
+        $familyMember->delete();
+
+        return response()->noContent();
+    }
+
+    /**
+     * Elimina permanentemente la persona de un miembro familiar.
+     *
+     * Borra la persona de la base de datos junto con sus evidencias.
+     * Guarda contra la eliminación de la persona principal del censo.
+     * Requiere permiso de actualización.
+     */
+    public function destroyFamilyMemberPerson(Affectation $affectation, FamilyMember $familyMember): Response
+    {
+        $this->authorize('update', $affectation);
+
+        $this->affectationService->destroyFamilyMemberPerson($affectation, $familyMember);
+
+        return response()->noContent();
+    }
+
+    /**
+     * Registra una baja (fallecido o lesionado) vinculada a una afectación.
+     *
+     * La causa es obligatoria para los fallecidos y debe estar activa.
+     * Requiere permiso de actualización sobre la afectación.
+     */
+    public function storeCasualty(StoreCasualtyRequest $request, Affectation $affectation): JsonResponse
+    {
+        $this->authorize('update', $affectation);
+
+        $casualty = $this->affectationService->storeCasualty($affectation, $request->validated());
+
+        return ApiResponse::success([
+            'id' => $casualty->id,
+            'affectation_id' => $casualty->affectation_id,
+            'person_id' => $casualty->person_id,
+            'type' => $casualty->type->value,
+            'cause_id' => $casualty->cause_id,
+        ], [], 201);
     }
 }

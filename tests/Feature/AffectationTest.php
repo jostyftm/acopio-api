@@ -592,6 +592,63 @@ it('rejects family members with missing required fields', function () {
         ->assertJsonValidationErrors('families.0.members.0.last_name');
 });
 
+it('permanently deletes a family member person from the database', function () {
+    $this->seed(RolePermissionSeeder::class);
+
+    $admin = makeUserWithRole('admin');
+    Passport::actingAs($admin);
+
+    Storage::fake('s3');
+
+    $affectation = makeAffectation();
+    $person = Person::factory()->create([
+        'document_type' => 'CC',
+        'document_number' => '987654321',
+        'first_name' => 'Juan',
+        'last_name' => 'Perez',
+    ]);
+    $member = $affectation->familyMembers()->create([
+        'person_id' => $person->id,
+        'family_group' => 1,
+        'is_householder' => false,
+    ]);
+
+    Storage::disk('s3')->put('evidence/family-members/'.$person->id.'/foto.jpg', 'contenido');
+    $person->attachments()->create([
+        'file_path' => 'evidence/family-members/'.$person->id.'/foto.jpg',
+        'original_name' => 'foto.jpg',
+        'mime' => 'image/jpeg',
+        'size' => 9,
+    ]);
+
+    $this->deleteJson("/api/v1/affectations/{$affectation->id}/family-members/{$member->id}/person")
+        ->assertNoContent();
+
+    Storage::disk('s3')->assertMissing('evidence/family-members/'.$person->id.'/foto.jpg');
+    expect(Person::find($person->id))->toBeNull()
+        ->and($affectation->familyMembers()->find($member->id))->toBeNull();
+});
+
+it('rejects permanently deleting the main censused person', function () {
+    $this->seed(RolePermissionSeeder::class);
+
+    $admin = makeUserWithRole('admin');
+    Passport::actingAs($admin);
+
+    $affectation = makeAffectation();
+    $main = $affectation->person;
+    $member = $affectation->familyMembers()->create([
+        'person_id' => $main->id,
+        'family_group' => 1,
+        'is_householder' => true,
+    ]);
+
+    $this->deleteJson("/api/v1/affectations/{$affectation->id}/family-members/{$member->id}/person")
+        ->assertUnprocessable();
+
+    expect(Person::find($main->id))->not->toBeNull();
+});
+
 /**
  * @return array<string, mixed>
  */

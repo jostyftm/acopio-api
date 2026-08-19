@@ -26,6 +26,7 @@ class DatabaseSeeder extends Seeder
             PropertyTypeSeeder::class,
             IncidentTypeSeeder::class,
             NeedsSeeder::class,
+            CasualtyCauseSeeder::class,
         ]);
 
         $admin = User::query()->firstOrCreate(
@@ -56,14 +57,14 @@ class DatabaseSeeder extends Seeder
         );
         $orgAdmin->assignRole(Role::findByName('org_admin', 'api'));
 
-        if (Person::count() === 0) {
-            Person::factory()->count(40)->create();
-            Person::factory()->verified()->count(20)->create();
-            Person::factory()->located()->count(10)->create();
-        }
+        // if (Person::count() === 0) {
+        //     Person::factory()->count(40)->create();
+        //     Person::factory()->verified()->count(20)->create();
+        //     Person::factory()->located()->count(10)->create();
+        // }
 
-        if (SearchReport::count() === 0) {
-            SearchReport::factory()->count(15)->create();
-        }
+        // if (SearchReport::count() === 0) {
+        //     SearchReport::factory()->count(15)->create();
+        // }
     }
 }

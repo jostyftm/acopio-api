@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\V1\Auth\LogoutController;
 use App\Http\Controllers\Api\V1\Auth\MeController;
 use App\Http\Controllers\Api\V1\Auth\MeModulesController;
 use App\Http\Controllers\Api\V1\Auth\SocialLoginController;
+use App\Http\Controllers\Api\V1\Balance\BalanceController;
 use App\Http\Controllers\Api\V1\CoverageZone\CoverageZoneController;
 use App\Http\Controllers\Api\V1\Department\DepartmentController;
 use App\Http\Controllers\Api\V1\Facility\FacilityController;
@@ -26,6 +27,7 @@ use App\Http\Controllers\Api\V1\SearchReport\SearchReportController;
 use App\Http\Controllers\Api\V1\Sms\SmsWebhookController;
 use App\Http\Controllers\Api\V1\Stats\StatsController;
 use App\Http\Controllers\Api\V1\User\UserController;
+use App\Http\Controllers\Api\V1\Visor\VisorController;
 use Illuminate\Support\Facades\Route;
 
 Route::name('api.v1.')->group(function (): void {
@@ -60,6 +62,14 @@ Route::name('api.v1.')->group(function (): void {
 
     Route::get('incident-types', [IncidentTypeController::class, 'index'])
         ->name('incident-types.index');
+
+    Route::middleware('throttle:public')
+        ->get('balance-general', [BalanceController::class, 'show'])
+        ->name('balance-general.show');
+
+    Route::middleware('throttle:public')
+        ->get('visor', [VisorController::class, 'show'])
+        ->name('visor.show');
 
     Route::get('auth/{provider}/redirect', [SocialLoginController::class, 'redirect'])
         ->name('auth.social.redirect');
@@ -107,6 +117,16 @@ Route::name('api.v1.')->group(function (): void {
             ->name('affectations.evidence.destroy');
         Route::post('affectations/{affectation}/verify', [AffectationController::class, 'verify'])
             ->name('affectations.verify');
+        Route::post('affectations/{affectation}/family-members', [AffectationController::class, 'storeFamilyMember'])
+            ->name('affectations.family-members.store');
+        Route::put('affectations/{affectation}/family-members/{familyMember}', [AffectationController::class, 'updateFamilyMember'])
+            ->name('affectations.family-members.update');
+        Route::delete('affectations/{affectation}/family-members/{familyMember}', [AffectationController::class, 'destroyFamilyMember'])
+            ->name('affectations.family-members.destroy');
+        Route::delete('affectations/{affectation}/family-members/{familyMember}/person', [AffectationController::class, 'destroyFamilyMemberPerson'])
+            ->name('affectations.family-members.person.destroy');
+        Route::post('affectations/{affectation}/casualties', [AffectationController::class, 'storeCasualty'])
+            ->name('affectations.casualties.store');
 
         Route::apiResource('search-reports', SearchReportController::class)->except(['store', 'destroy']);
         Route::apiResource('users', UserController::class);

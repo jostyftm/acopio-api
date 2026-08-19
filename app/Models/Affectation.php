@@ -3,6 +3,8 @@
 namespace App\Models;
 
 use Clickbar\Magellan\Data\Geometries\Point;
+use Database\Factories\AffectationFactory;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -11,6 +13,9 @@ use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 class Affectation extends Model
 {
+    /** @use HasFactory<AffectationFactory> */
+    use HasFactory;
+
     protected $fillable = [
         'person_id',
         'incident_type_id',

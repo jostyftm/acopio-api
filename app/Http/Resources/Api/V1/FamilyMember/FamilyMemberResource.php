@@ -19,6 +19,7 @@ class FamilyMemberResource extends JsonResource
             'type' => 'family-member',
             'attributes' => [
                 'is_householder' => $this->is_householder,
+                'family_group' => $this->family_group,
             ],
             'relationships' => [
                 'person' => $this->whenLoaded('person', fn () => FamilyMemberPersonResource::make($this->person)),
