@@ -6,6 +6,7 @@ use App\Models\SearchReport;
 use App\Services\Balance\BalanceService;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class VisorService
@@ -28,33 +29,33 @@ class VisorService
         $balance = $this->balanceService->summary();
 
         $totalByMunicipality = DB::table('affectations')
-            ->join('people', 'people.id', '=', 'affectations.person_id')
-            ->select('people.municipality_id as municipality_id', DB::raw('count(*) as total'))
-            ->groupBy('people.municipality_id')
+            ->whereNotNull('municipality_id')
+            ->select('municipality_id', DB::raw('count(*) as total'))
+            ->groupBy('municipality_id')
             ->pluck('total', 'municipality_id');
 
         $severityByMunicipality = DB::table('affectation_severity')
             ->join('affectation_severities', 'affectation_severities.id', '=', 'affectation_severity.affectation_severity_id')
             ->join('affectations', 'affectations.id', '=', 'affectation_severity.affectation_id')
-            ->join('people', 'people.id', '=', 'affectations.person_id')
+            ->whereNotNull('affectations.municipality_id')
             ->select(
-                'people.municipality_id as municipality_id',
+                'affectations.municipality_id',
                 'affectation_severities.code',
                 DB::raw('count(*) as total'),
             )
-            ->groupBy('people.municipality_id', 'affectation_severities.code')
+            ->groupBy('affectations.municipality_id', 'affectation_severities.code')
             ->get()
             ->groupBy('municipality_id');
 
         $casualtiesByMunicipality = DB::table('casualties')
             ->join('affectations', 'affectations.id', '=', 'casualties.affectation_id')
-            ->join('people', 'people.id', '=', 'affectations.person_id')
+            ->whereNotNull('affectations.municipality_id')
             ->select(
-                'people.municipality_id as municipality_id',
+                'affectations.municipality_id',
                 'casualties.type',
                 DB::raw('count(*) as total'),
             )
-            ->groupBy('people.municipality_id', 'casualties.type')
+            ->groupBy('affectations.municipality_id', 'casualties.type')
             ->get()
             ->groupBy('municipality_id');
 
@@ -120,8 +121,8 @@ class VisorService
     private function recentPoints(): array
     {
         $rows = DB::table('affectations')
+            ->leftJoin('municipalities', 'municipalities.id', '=', 'affectations.municipality_id')
             ->leftJoin('people', 'people.id', '=', 'affectations.person_id')
-            ->leftJoin('municipalities', 'municipalities.id', '=', 'people.municipality_id')
             ->leftJoin('incident_types', 'incident_types.id', '=', 'affectations.incident_type_id')
             ->leftJoin('affectation_statuses', 'affectation_statuses.id', '=', 'affectations.status_id')
             ->whereNotNull('affectations.location')
@@ -169,8 +170,16 @@ class VisorService
             ->get()
             ->groupBy('affectation_id');
 
+        $evidenceByAffectation = DB::table('attachments')
+            ->where('attachable_type', 'App\\Models\\Affectation')
+            ->whereIn('attachable_id', $ids)
+            ->select('attachable_id', 'id', 'file_path', 'original_name', 'mime')
+            ->orderBy('id')
+            ->get()
+            ->groupBy('attachable_id');
+
         return $rows
-            ->map(function (object $row) use ($severityByAffectation, $propertyByAffectation, $casualtiesByAffectation): array {
+            ->map(function (object $row) use ($severityByAffectation, $propertyByAffectation, $casualtiesByAffectation, $evidenceByAffectation): array {
                 $id = (int) $row->id;
                 $severities = collect($severityByAffectation[$id] ?? []);
                 $casualties = collect($casualtiesByAffectation[$id] ?? []);
@@ -196,6 +205,15 @@ class VisorService
                     'fallecidos' => (int) ($casualties->firstWhere('type', 'deceased')->total ?? 0),
                     'heridos' => (int) ($casualties->firstWhere('type', 'injured')->total ?? 0),
                     'created_at' => Carbon::parse($row->created_at)->toIso8601String(),
+                    'evidence' => collect($evidenceByAffectation[$id] ?? [])
+                        ->map(fn (object $att) => [
+                            'id' => (int) $att->id,
+                            'url' => Storage::disk('s3')->url($att->file_path),
+                            'original_name' => $att->original_name,
+                            'mime' => $att->mime,
+                        ])
+                        ->values()
+                        ->all(),
                 ];
             })
             ->values()

@@ -29,6 +29,7 @@ it('exposes the situational snapshot via a public endpoint', function () {
     $affectation->person()->update(['municipality_id' => $municipality->id]);
     $affectation->update([
         'location' => Point::makeGeodetic(3.45, -76.53),
+        'municipality_id' => $municipality->id,
         'verified_at' => now(),
     ]);
 
@@ -94,4 +95,27 @@ it('does not expose personal data in the visor points', function () {
         ->assertJsonMissingPath('data.recent_points.0.full_name')
         ->assertJsonMissingPath('data.recent_points.0.document_number')
         ->assertJsonMissingPath('data.recent_points.0.phone');
+});
+
+it('includes evidence attachments in recent points', function () {
+    $affectation = makeAffectation();
+    $affectation->update(['location' => Point::makeGeodetic(3.45, -76.53)]);
+    $affectation->attachments()->create([
+        'file_path' => 'evidence/affectations/'.$affectation->id.'/foto-test.jpg',
+        'original_name' => 'foto-test.jpg',
+        'mime' => 'image/jpeg',
+        'size' => 1024,
+    ]);
+
+    $this->getJson('/api/v1/visor')
+        ->assertOk()
+        ->assertJsonStructure([
+            'data' => [
+                'recent_points' => [[
+                    'evidence' => [['id', 'url', 'original_name', 'mime']],
+                ]],
+            ],
+        ])
+        ->assertJsonPath('data.recent_points.0.evidence.0.original_name', 'foto-test.jpg')
+        ->assertJsonPath('data.recent_points.0.evidence.0.mime', 'image/jpeg');
 });

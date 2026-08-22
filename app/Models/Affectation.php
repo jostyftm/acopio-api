@@ -19,6 +19,7 @@ class Affectation extends Model
     protected $fillable = [
         'person_id',
         'incident_type_id',
+        'municipality_id',
         'reported_by',
         'organization_id',
         'status_id',
@@ -42,6 +43,11 @@ class Affectation extends Model
     public function person(): BelongsTo
     {
         return $this->belongsTo(Person::class);
+    }
+
+    public function municipality(): BelongsTo
+    {
+        return $this->belongsTo(Municipality::class);
     }
 
     public function status(): BelongsTo
